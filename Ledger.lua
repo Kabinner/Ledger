@@ -1,3 +1,5 @@
+local _G = getfenv(0)
+
 local function id(func)
     return string.sub(tostring(func), -8)
 end
