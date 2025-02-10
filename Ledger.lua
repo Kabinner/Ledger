@@ -102,6 +102,7 @@ function Ledger:print(...)
 end
 function Ledger:load() 
     self:print("Load.")
+    UI()
 end
 function Ledger:enable() 
     self:print("Enable.")
@@ -109,7 +110,6 @@ function Ledger:enable()
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
         addon:debug("/ledger command.")
-        UI()
     end
 end
 function Ledger:disable() 
@@ -131,8 +131,10 @@ function UI()
     LedgerFrame:SetHeight(512)
     LedgerFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 
-    LedgerFrame:SetMovable(true)
     LedgerFrame:EnableMouse(true)
+    LedgerFrame:SetMovable(true)
+    LedgerFrame:SetUserPlaced(true)
+
     LedgerFrame:RegisterForDrag("LeftButton")
     LedgerFrame:SetScript("OnDragStart", function() LedgerFrame:StartMoving() end)
     LedgerFrame:SetScript("OnDragStop", function() LedgerFrame:StopMovingOrSizing() end)
