@@ -1,5 +1,9 @@
+-- Isolate this file.
 local _G = getfenv(0)
+_G = setmetatable({_G = _G}, {__index = _G})
+setfenv(1, _G)
 
+-- Begin
 local function id(_)
     return string.sub(tostring(_), -8)
 end
@@ -17,6 +21,7 @@ local Addon = {
 }
 function Addon:new(object)
     self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
+    self:debug("Frame: ", self.Frame)
     self.object = object
     for function_name in self.object do
         if function_name ~= "new" and type(self.object[function_name]) == "function" then
@@ -56,8 +61,8 @@ function Addon:on(event, callback)
     self.Frame:RegisterEvent(event)
     self.events[event] = callback
 end
-function Addon:callback(callback)
-    return self.object_map_reversed[id(callback)](self.object)
+function Addon:callback(callback, ...)
+    return self.object_map_reversed[id(callback)](self.object, self.Frame, unpack(arg))
 end
 function Addon:dispatch(e)
     if e == "ADDON_LOADED" and arg1 == self.name then
@@ -65,16 +70,15 @@ function Addon:dispatch(e)
     elseif e ~= "ADDON_LOADED" then
         func = self.events[e]
         self:debug(e, " -> ", func)
-        self:callback(func, self.Frame)
+        self:callback(func)
     end
 end
 function Addon:load()
-
     self.Frame:SetScript('OnEvent', function () self:dispatch(event) end)
 end
 
-function UI()
-    local LedgerFrame = CreateFrame("Frame", "FRAME_LEDGER_PANEL", Addon.Frame)
+function UI(Frame)
+    local LedgerFrame = CreateFrame("Frame", "FRAME_LEDGER_PANEL", Frame)
     LedgerFrame:SetWidth(384)
     LedgerFrame:SetHeight(512)
     LedgerFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -156,12 +160,14 @@ function Ledger:print(...)
 
     DEFAULT_CHAT_FRAME:AddMessage(Addon.name .. ": " .. msg);
 end
-function Ledger:load() 
+function Ledger:load(Frame)
+    Addon:debug("Ledger:load", "Frame", Frame)
     self:print("Load.")
-    UI()
+    UI(frame)
 end
-function Ledger:enable() 
+function Ledger:enable(Frame) 
     self:print("Enable.")
+    Addon:debug("Ledger:enable", "Frame", Frame)
 
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
