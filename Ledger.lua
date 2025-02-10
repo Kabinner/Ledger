@@ -1,7 +1,7 @@
 local _G = getfenv(0)
 
-local function id(func)
-    return string.sub(tostring(func), -8)
+local function id(_)
+    return string.sub(tostring(_), -8)
 end
 local function print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(msg)
@@ -16,14 +16,14 @@ local Addon = {
     object_map_reversed = {}
 }
 function Addon:new(object)
-    self.Frame = CreateFrame("Frame")
+    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
     self.object = object
     for function_name in self.object do
         if function_name ~= "new" and type(self.object[function_name]) == "function" then
             self:debug("Mapping ", function_name, " to: ", self.object[function_name])
             self.object_map[function_name] = self.object[function_name]
 
-            self:debug("Mapping ", id(self.object[function_name]), " to: ", self.object[function_name])
+            self:debug("Mapping ", id(self.object[function_name]), " to: ", function_name)
             self.object_map_reversed[id(self.object[function_name])] = self.object[function_name]
         end
     end
@@ -44,6 +44,8 @@ function Addon:debug(...)
             msg = msg .. tostring(value) .. " "
         elseif type(value) == "function" then
             msg = msg .. id(value) .. " "
+        elseif value == nil then
+            msg = msg .. "nil" .. " "
         else
             msg = msg .. value .. " "
         end
@@ -56,79 +58,25 @@ end
 function Addon:callback(callback)
     return self.object_map_reversed[id(callback)](self.object)
 end
+function Addon:dispatch(e)
+    if e == "ADDON_LOADED" and arg1 == self.name then
+        self.object["load"](self.object, self.Frame)
+    elseif e ~= "ADDON_LOADED" then
+        func = self.events[e]
+        self:debug(e, " -> ", func)
+        self:callback(func, self.Frame)
+    end
+end
 function Addon:load()
     for event in self.events do
         self.Frame:RegisterEvent(event)
     end
 
-    local func = nil
-    self.Frame:SetScript('OnEvent', function ()
-        for e in self.events do
-            func = self.events[e]
-            if e == event then
-                if e == "ADDON_LOADED" and arg1 == self.name then
-                    self.object["load"](self.object, self.Frame)
-                elseif e ~= "ADDON_LOADED" then
-                    local key = id(func)
-                    self:debug("SetScript: ", e, " -> ", func, key)
-                    -- self.object_map_reversed[id(func)](self.object)
-                    self:callback(func, self.Frame)
-                end
-            end
-        end
-    end)
+    self.Frame:SetScript('OnEvent', function () self:dispatch(event) end)
 end
-
-Ledger = {}
-function Ledger:new()
-    return setmetatable(Ledger, { __index = Ledger })
-end
-function Ledger:print(...)
-    local msg = ""
-    for idx in arg do
-        if idx == "n" then
-            break
-        end
-        local value = arg[idx]
-
-        if type(value) == "table" then
-            msg = msg .. tostring(value) .. " "
-        elseif type(value) == "function" then
-            msg = msg .. tostring(value) .. " "
-        else
-            msg = msg .. value .. " "
-        end
-    end
-
-    DEFAULT_CHAT_FRAME:AddMessage(Addon.name .. ": " .. msg);
-end
-function Ledger:load() 
-    self:print("Load.")
-    UI()
-end
-function Ledger:enable() 
-    self:print("Enable.")
-
-    SLASH_LEDGER1 = "/ledger"
-    SlashCmdList["LEDGER"] = function(msg)
-        addon:debug("/ledger command.")
-    end
-end
-function Ledger:disable() 
-end
-
-ledger = Ledger:new()
-addon = Addon:new(ledger)
-
-addon:on("ADDON_LOADED", ledger.load)
-addon:on("PLAYER_LOGIN", ledger.enable)
-addon:on("PLAYER_LOGOUT", ledger.disable)
-
-addon:load()
-
 
 function UI()
-    local LedgerFrame = CreateFrame("Frame", "BasicLedgerFrame", UIParent)
+    local LedgerFrame = CreateFrame("Frame", "FRAME_LEDGER_PANEL", Addon.Frame)
     LedgerFrame:SetWidth(384)
     LedgerFrame:SetHeight(512)
     LedgerFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -186,3 +134,50 @@ function UI()
 
     LedgerFrame:Show()
 end
+
+Ledger = {}
+function Ledger:new()
+    return setmetatable(Ledger, { __index = Ledger })
+end
+function Ledger:print(...)
+    local msg = ""
+    for idx in arg do
+        if idx == "n" then
+            break
+        end
+        local value = arg[idx]
+
+        if type(value) == "table" then
+            msg = msg .. tostring(value) .. " "
+        elseif type(value) == "function" then
+            msg = msg .. tostring(value) .. " "
+        else
+            msg = msg .. value .. " "
+        end
+    end
+
+    DEFAULT_CHAT_FRAME:AddMessage(Addon.name .. ": " .. msg);
+end
+function Ledger:load() 
+    self:print("Load.")
+    UI()
+end
+function Ledger:enable() 
+    self:print("Enable.")
+
+    SLASH_LEDGER1 = "/ledger"
+    SlashCmdList["LEDGER"] = function(msg)
+        addon:debug("/ledger command.")
+    end
+end
+function Ledger:disable() 
+end
+
+ledger = Ledger:new()
+addon = Addon:new(ledger)
+
+addon:on("ADDON_LOADED", ledger.load)
+addon:on("PLAYER_LOGIN", ledger.enable)
+addon:on("PLAYER_LOGOUT", ledger.disable)
+
+addon:load()
