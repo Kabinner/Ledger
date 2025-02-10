@@ -135,7 +135,6 @@ addon:on("PLAYER_LOGOUT", ledger.disable)
 
 addon:load()
 
-
 function Ledger:UI(Frame)
     local LedgerFrame = CreateFrame("Frame", "FRAME_LEDGER_PANEL", Frame)
     LedgerFrame:SetWidth(384)
@@ -150,7 +149,7 @@ function Ledger:UI(Frame)
     LedgerFrame:SetScript("OnDragStart", function() LedgerFrame:StartMoving() end)
     LedgerFrame:SetScript("OnDragStop", function() LedgerFrame:StopMovingOrSizing() end)
 
-    local CloseButton = CreateFrame("Button", "SpellBookCloseButton", LedgerFrame, "UIPanelCloseButton")
+    local CloseButton = CreateFrame("Button", "FRAME_LEDGER_PANEL_BUTTON_CLOSE", LedgerFrame, "UIPanelCloseButton")
     CloseButton:SetPoint("CENTER", LedgerFrame, "TOPRIGHT", -44, -25)
     CloseButton:SetScript("OnClick", function() LedgerFrame:Hide() end)
 
@@ -184,14 +183,115 @@ function Ledger:UI(Frame)
     BottomRight:SetHeight(256)
     BottomRight:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", 0, 0)
 
-    local TitleText = LedgerFrame:CreateFontString("SpellBookTitleText", "ARTWORK", "GameFontNormal")
+    local TitleText = LedgerFrame:CreateFontString("FRAME_LEDGER_PANEL_TITLE_TEXT", "ARTWORK", "GameFontNormal")
     TitleText:SetPoint("CENTER", LedgerFrame, "CENTER", 6, 230)
     TitleText:SetText("Ledger")
 
-    local PageText = LedgerFrame:CreateFontString("SpellBookPageText", "ARTWORK", "GameFontNormal")
+    local PageText = LedgerFrame:CreateFontString("FRAME_LEDGER_PANEL_PAGE_TEXT", "ARTWORK", "GameFontNormal")
     PageText:SetWidth(102)
     PageText:SetPoint("BOTTOM", LedgerFrame, "BOTTOM", -14, 96)
     PageText:SetText("Page 1")
 
+
+    local Page = {
+        currentPage = 1,
+        pages = {
+            { "Page 1 Line 1", "Page 1 Line 2", "Page 1 Line 3" },
+            { "Page 2 Line 1", "Page 2 Line 2", "Page 2 Line 3" },
+            { "Page 3 Line 1", "Page 3 Line 2", "Page 3 Line 3" }
+        }
+    }
+
+    local PrevButton = CreateFrame("Button", "FRAME_LEDGER_PREV_BUTTON", LedgerFrame, "UIPanelButtonTemplate")
+    PrevButton:SetPoint("BOTTOM", LedgerFrame, "BOTTOMLEFT", 50, 85)
+    PrevButton:SetWidth(32)
+    PrevButton:SetHeight(32)
+
+    local normTex = PrevButton:CreateTexture(nil, "BACKGROUND")
+    normTex:SetAllPoints()
+    normTex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up")
+    PrevButton:SetNormalTexture(normTex)
+
+    local pushTex = PrevButton:CreateTexture(nil, "BACKGROUND")
+    pushTex:SetAllPoints()
+    pushTex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down")
+    PrevButton:SetPushedTexture(pushTex)
+
+    local disableTex = PrevButton:CreateTexture(nil, "BACKGROUND")
+    disableTex:SetAllPoints()
+    disableTex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Disabled")
+    PrevButton:SetDisabledTexture(disableTex)
+
+    PrevButton:SetScript("OnClick", function()
+        PlaySound("igAbiliityPageTurn")
+        Page:SetPage(Page.currentPage - 1)
+    end)
+
+    local NextButton = CreateFrame("Button", "FRAME_LEDGER_NEXT_BUTTON", LedgerFrame, "UIPanelButtonTemplate")
+    NextButton:SetPoint("BOTTOM", LedgerFrame, "BOTTOMRIGHT", -70, 85)
+    NextButton:SetWidth(32)
+    NextButton:SetHeight(32)
+
+    local normTex = NextButton:CreateTexture(nil, "BACKGROUND")
+    normTex:SetAllPoints()
+    normTex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
+    NextButton:SetNormalTexture(normTex)
+
+    local pushTex = NextButton:CreateTexture(nil, "BACKGROUND")
+    pushTex:SetAllPoints()
+    pushTex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
+    NextButton:SetPushedTexture(pushTex)
+
+    local disableTex = NextButton:CreateTexture(nil, "BACKGROUND")
+    disableTex:SetAllPoints()
+    disableTex:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Disabled")
+    NextButton:SetDisabledTexture(disableTex)
+
+    NextButton:SetScript("OnClick", function()
+        PlaySound("igAbiliityPageTurn")
+        Page:SetPage(Page.currentPage + 1)
+    end)
+
+    PrevButton:Disable(false)
+    Addon:debug("pages: ", table.getn(Page.pages))
+    if table.getn(Page.pages) <= 1 then
+        NextButton:Enable(false)
+    end
+
+
+    
+    function Page:SetPage(page)
+        self.currentPage = math.max(1, math.min(page, table.getn(self.pages)))
+        PageText:SetText("Page "..self.currentPage)
+        self:UpdatePageContent()
+        
+        -- Update button states
+        if self.currentPage > 1 then
+            PrevButton:Enable()
+        else
+            PrevButton:Disable()
+        end
+        if self.currentPage < table.getn(self.pages) then
+            NextButton:Enable()
+        else
+            NextButton:Disable()
+        end
+    end
+    function Page:UpdatePageContent()
+        local content = self.pages[self.currentPage] or {}
+        for i = 1, 3 do
+            _G["LedgerText"..i]:SetText(content[i] or "")
+        end
+    end
+
+    local textY = -70
+    for i = 1, 3 do
+        local text = LedgerFrame:CreateFontString("LedgerText"..i, "ARTWORK", "GameFontNormal")
+        text:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 30, textY)
+        text:SetWidth(324)
+        text:SetJustifyH("LEFT")
+        textY = textY - 30
+    end
+    Page:UpdatePageContent()
     LedgerFrame:Show()
 end
