@@ -1,16 +1,6 @@
-<<<<<<< HEAD
 ## Interface: 11200
 ## Title: Ledger
 ## Author: Kabinner
 ## Notes: Ledger
 ## Version: GIT
-
-=======
-## Interface: 11200
-## Title: Ledger
-## Author: Kabinner
-## Notes: Ledger
-## Version: GIT
-
->>>>>>> c2fc51d15c4361a6c2028d36adc7b3b983c0c2ca
 Ledger.lua
