@@ -3,13 +3,15 @@ local _G = getfenv(0)
 _G = setmetatable({_G = _G}, {__index = _G})
 setfenv(1, _G)
 
--- Begin
+-- Utils
 local function id(_)
     return string.sub(tostring(_), -8)
 end
 local function print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(msg)
 end
+
+-- Addon
 local Addon = {
     name = "Ledger",
     Frame = nil,
@@ -77,7 +79,59 @@ function Addon:load()
     self.Frame:SetScript('OnEvent', function () self:dispatch(event) end)
 end
 
-function UI(Frame)
+
+-- Begin
+Ledger = {}
+function Ledger:new()
+    return setmetatable(Ledger, { __index = Ledger })
+end
+function Ledger:print(...)
+    local msg = ""
+    for idx in arg do
+        if idx == "n" then
+            break
+        end
+        local value = arg[idx]
+
+        if type(value) == "table" then
+            msg = msg .. tostring(value) .. " "
+        elseif type(value) == "function" then
+            msg = msg .. tostring(value) .. " "
+        else
+            msg = msg .. value .. " "
+        end
+    end
+
+    DEFAULT_CHAT_FRAME:AddMessage(Addon.name .. ": " .. msg);
+end
+function Ledger:load(Frame)
+    Addon:debug("Ledger:load", "Frame", Frame)
+    self:print("Load.")
+    self:UI(frame)
+end
+function Ledger:enable(Frame) 
+    self:print("Enable.")
+    Addon:debug("Ledger:enable", "Frame", Frame)
+
+    SLASH_LEDGER1 = "/ledger"
+    SlashCmdList["LEDGER"] = function(msg)
+        addon:debug("/ledger command.")
+    end
+end
+function Ledger:disable() 
+end
+
+ledger = Ledger:new()
+addon = Addon:new(ledger)
+
+addon:on("ADDON_LOADED", ledger.load)
+addon:on("PLAYER_LOGIN", ledger.enable)
+addon:on("PLAYER_LOGOUT", ledger.disable)
+
+addon:load()
+
+
+function Ledger:UI(Frame)
     local LedgerFrame = CreateFrame("Frame", "FRAME_LEDGER_PANEL", Frame)
     LedgerFrame:SetWidth(384)
     LedgerFrame:SetHeight(512)
@@ -136,52 +190,3 @@ function UI(Frame)
 
     LedgerFrame:Show()
 end
-
-Ledger = {}
-function Ledger:new()
-    return setmetatable(Ledger, { __index = Ledger })
-end
-function Ledger:print(...)
-    local msg = ""
-    for idx in arg do
-        if idx == "n" then
-            break
-        end
-        local value = arg[idx]
-
-        if type(value) == "table" then
-            msg = msg .. tostring(value) .. " "
-        elseif type(value) == "function" then
-            msg = msg .. tostring(value) .. " "
-        else
-            msg = msg .. value .. " "
-        end
-    end
-
-    DEFAULT_CHAT_FRAME:AddMessage(Addon.name .. ": " .. msg);
-end
-function Ledger:load(Frame)
-    Addon:debug("Ledger:load", "Frame", Frame)
-    self:print("Load.")
-    UI(frame)
-end
-function Ledger:enable(Frame) 
-    self:print("Enable.")
-    Addon:debug("Ledger:enable", "Frame", Frame)
-
-    SLASH_LEDGER1 = "/ledger"
-    SlashCmdList["LEDGER"] = function(msg)
-        addon:debug("/ledger command.")
-    end
-end
-function Ledger:disable() 
-end
-
-ledger = Ledger:new()
-addon = Addon:new(ledger)
-
-addon:on("ADDON_LOADED", ledger.load)
-addon:on("PLAYER_LOGIN", ledger.enable)
-addon:on("PLAYER_LOGOUT", ledger.disable)
-
-addon:load()
