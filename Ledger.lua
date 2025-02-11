@@ -7,6 +7,47 @@ _G = setmetatable({
 })
 setfenv(1, _G)
 
+-- Table to store original functions
+local hookedFunctions = {}
+
+-- Function to hook a Blizzard function dynamically
+local function hookFunction(funcName, callback)
+    if _G[funcName] then
+        hookedFunctions[funcName] = _G[funcName]
+        _G[funcName] = function(...)
+            callback(funcName, unpack(arg))
+            return hookedFunctions[funcName](unpack(arg))
+        end
+    end
+end
+
+-- Function to detect changes in player gold
+local lastGold = GetMoney()
+local function checkGoldChange(reason)
+    local newGold = GetMoney()
+    local difference = newGold - lastGold
+    if difference ~= 0 then
+        local action = (difference > 0) and "Gained" or "Lost"
+        DEFAULT_CHAT_FRAME:AddMessage("[GOLD TRACKER] " .. action .. " " .. math.abs(difference) .. " copper (" .. reason .. ")")
+    end
+    lastGold = newGold
+end
+
+-- Hook functions that involve gold transactions
+hookFunction("RepairAllItems", function() checkGoldChange("Repairs") end)
+hookFunction("UseContainerItem", function() checkGoldChange("Selling Item") end)
+hookFunction("PickupMerchantItem", function() checkGoldChange("Buying from Vendor") end)
+hookFunction("SendMail", function() checkGoldChange("Mail Sent") end)
+hookFunction("PlaceAuctionBid", function() checkGoldChange("Auction House Bid") end)
+hookFunction("PickupPlayerMoney", function() checkGoldChange("Trade") end)
+
+-- Monitor loot gold gain through events
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("PLAYER_MONEY")
+frame:SetScript("OnEvent", function() checkGoldChange("Loot / Trade") end)
+
+
+
 -- Settings
 local Addon = {
     debug = true,
