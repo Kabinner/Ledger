@@ -70,19 +70,17 @@ end
 
 -- Debug
 local Debug = {
-    LEVEL="INFO",
+    LEVEL="TRACE",
     INFO="INFO",
     TRACE="TRACE"
 }
-function Debug:print(color, ...)
+function Debug:print(level, color, ...)
     if not Addon.debug then
         return
     end
     local msg = ""
     for idx, value in ipairs(arg) do
-        if type(value) == "table" then
-            msg = msg .. tostring(value) .. " "
-        elseif type(value) == "function" then
+        if type(value) == "table" or type(value) == "function" then
             msg = msg .. id(value) .. " "
         elseif value == nil then
             msg = msg .. "nil" .. " "
@@ -90,20 +88,17 @@ function Debug:print(color, ...)
             msg = msg .. value .. " "
         end
     end
-    print(color .. Addon.name .. " [DEBUG]: " .. msg)
+    print(color .. Addon.name .. " [".. level .."]: " .. msg)
 
 end
-function Debug:info(...)
-    if self.LEVEL ~= self.INFO then
-        return
-    end
-    self:print("|cffffd700", unpack(arg))
+function Debug:log(...)
+    self:print(Debug.INFO, "|cffffd700", unpack(arg))
 end
 function Debug:trace(...)
     if self.LEVEL ~= self.TRACE then
         return
     end
-    self:print("|cffffd700", unpack(arg))
+    self:print(Debug.TRACE, "|cffffd700", unpack(arg))
 end
 
 -- API Hooks
@@ -111,9 +106,9 @@ local _CreateFrame = CreateFrame
 CreateFrame = function(...)
     Frame = _CreateFrame(unpack(arg))
     function Frame:Texture(texture, width, height, opts)
-        Debug:info(texture, width, height, opts)
+        Debug:log(texture, width, height, opts)
         for func, args in pairs(opts) do
-            Debug:info("function call", func, unpack(args))
+            Debug:log("function call", func, unpack(args))
         end
     end
 
@@ -123,7 +118,7 @@ end
 -- Addon lib
 function Addon:new(object)
     self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
-    Debug:info("Frame: ", self.Frame)
+    Debug:log("Frame: ", self.Frame)
     self.object = object
     for function_name in self.object do
         if function_name ~= "new" and type(self.object[function_name]) == "function" then
@@ -137,27 +132,15 @@ function Addon:new(object)
         end
     end
 end
-function Debug:info(...)
-    if self.LEVEL ~= self.INFO then
-        return
-    end
-    self:print("|cffffd700", unpack(arg))
-end
-function Debug:trace(...)
-    if self.LEVEL ~= self.TRACE then
-        return
-    end
-    self:print("|cffffd700", unpack(arg))
-end
 
 -- API Hooks
 local _CreateFrame = CreateFrame
 CreateFrame = function(...)
     Frame = _CreateFrame(unpack(arg))
     function Frame:Texture(texture, width, height, opts)
-        Debug:info(texture, width, height, opts)
+        Debug:log(texture, width, height, opts)
         for func, args in pairs(opts) do
-            Debug:info("function call", func, unpack(args))
+            Debug:log("function call", func, unpack(args))
         end
     end
 
@@ -167,7 +150,7 @@ end
 -- Addon lib
 function Addon:new(object)
     self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
-    Debug:info("Frame: ", self.Frame)
+    Debug:log("Frame: ", self.Frame)
     self.object = object
     for function_name in self.object do
         if function_name ~= "new" and type(self.object[function_name]) == "function" then
@@ -197,7 +180,7 @@ function Addon:dispatch(e)
         self.object["load"](self.object, self.Frame)
     elseif e ~= "ADDON_LOADED" then
         func = self.events[e]
-        Debug:info("Addon:dispatch: ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
+        Debug:log("Addon:dispatch: ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
         self:callback(func)
     end
 end
@@ -228,14 +211,14 @@ function Ledger:print(...)
     DEFAULT_CHAT_FRAME:AddMessage(Addon.name .. ": " .. msg);
 end
 function Ledger:load(Frame)
-    Debug:info("Ledger:load", "Frame", Frame)
+    Debug:log("Ledger:load", "Frame", Frame)
     self:print("Load.")
     self:UI(Frame)
 end
 
 function Ledger:enable(Frame)
     self:print("Enable.")
-    Debug:info("Ledger:enable", "Frame", Frame)
+    Debug:log("Ledger:enable", "Frame", Frame)
 
 
     -- Frame:CreateTexture(nil, "BACKGROUND")
@@ -247,11 +230,11 @@ function Ledger:enable(Frame)
     -- Frame.Texture:BACKGROUND
 
     Frame:Texture([[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
-    Debug:info("Ledger:enable", "Frame", Frame)
+    Debug:log("Ledger:enable", "Frame", Frame)
 
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
-        Debug:info("/ledger command.")
+        Debug:log("/ledger command.")
     end
 end
 function Ledger:disable()
@@ -260,8 +243,7 @@ end
 ledger = Ledger:new()
 addon = Addon:new(ledger)
 
-Debug:info("Ledger: ", ledger)
-Debug:info("Ledger: ", ledger)
+Debug:log("Ledger: ", ledger)
 
 addon:on("ADDON_LOADED", ledger.load)
 addon:on("PLAYER_LOGIN", ledger.enable)
@@ -289,9 +271,6 @@ function Ledger:UI(Frame)
 
     local CloseButton = CreateFrame("Button", "FRAME_LEDGER_PANEL_BUTTON_CLOSE", LedgerFrame, "UIPanelCloseButton")
     CloseButton:SetPoint("CENTER", LedgerFrame, "TOPRIGHT", -44, -25)
-    CloseButton:SetScript("OnClick", function()
-        LedgerFrame:Hide()
-    end)
     CloseButton:SetScript("OnClick", function()
         LedgerFrame:Hide()
     end)
@@ -393,7 +372,7 @@ function Ledger:UI(Frame)
     end)
 
     PrevButton:Disable()
-    Debug:info("pages: ", table.getn(Page.pages))
+    Debug:log("pages: ", table.getn(Page.pages))
     if table.getn(Page.pages) <= 1 then
         NextButton:Enable()
     end
