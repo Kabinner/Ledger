@@ -95,6 +95,50 @@ function Addon:new(object)
             self.object_map_lookup[id(self.object[function_name])] = function_name
         end
     end
+end
+function Debug:info(...)
+    if self.LEVEL ~= self.INFO then
+        return
+    end
+    self:print("|cffffd700", unpack(arg))
+end
+function Debug:trace(...)
+    if self.LEVEL ~= self.TRACE then
+        return
+    end
+    self:print("|cffffd700", unpack(arg))
+end
+
+-- API Hooks
+local _CreateFrame = CreateFrame
+CreateFrame = function(...)
+    Frame = _CreateFrame(unpack(arg))
+    function Frame:Texture(texture, width, height, opts)
+        Debug:info(texture, width, height, opts)
+        for func, args in pairs(opts) do
+            Debug:info("function call", func, unpack(args))
+        end
+    end
+
+    return Frame
+end
+
+-- Addon lib
+function Addon:new(object)
+    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
+    Debug:info("Frame: ", self.Frame)
+    self.object = object
+    for function_name in self.object do
+        if function_name ~= "new" and type(self.object[function_name]) == "function" then
+            Debug:trace("Mapping ", self.name .. ":" .. function_name, "to: ", self.object[function_name])
+            self.object_map[function_name] = self.object[function_name]
+
+            Debug:trace("Mapping ", id(self.object[function_name]), " to: ", self.name .. ":" .. function_name .. "")
+            self.object_map_reversed[id(self.object[function_name])] = self.object[function_name]
+
+            self.object_map_lookup[id(self.object[function_name])] = function_name
+        end
+    end
 
     return setmetatable(Addon, {
         __index = Addon
@@ -113,10 +157,14 @@ function Addon:dispatch(e)
     elseif e ~= "ADDON_LOADED" then
         func = self.events[e]
         Debug:info("Addon:dispatch: ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
+        Debug:info("Addon:dispatch: ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
         self:callback(func)
     end
 end
 function Addon:load()
+    self.Frame:SetScript('OnEvent', function()
+        self:dispatch(event)
+    end)
     self.Frame:SetScript('OnEvent', function()
         self:dispatch(event)
     end)
@@ -137,7 +185,6 @@ function Ledger:print(...)
         end
         msg = msg .. value .. " "
     end
-
     DEFAULT_CHAT_FRAME:AddMessage(Addon.name .. ": " .. msg);
 end
 function Ledger:load(Frame)
@@ -160,6 +207,7 @@ function Ledger:enable(Frame)
     -- Frame.Texture:BACKGROUND
 
     Frame:Texture([[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
+    Debug:info("Ledger:enable", "Frame", Frame)
 
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
@@ -172,6 +220,7 @@ end
 ledger = Ledger:new()
 addon = Addon:new(ledger)
 
+Debug:info("Ledger: ", ledger)
 Debug:info("Ledger: ", ledger)
 
 addon:on("ADDON_LOADED", ledger.load)
@@ -203,8 +252,12 @@ function Ledger:UI(Frame)
     CloseButton:SetScript("OnClick", function()
         LedgerFrame:Hide()
     end)
+    CloseButton:SetScript("OnClick", function()
+        LedgerFrame:Hide()
+    end)
 
     local Icon = LedgerFrame:CreateTexture(nil, "BACKGROUND")
+    Icon:SetTexture([[Interface\Spellbook\Spellbook-Icon]])
     Icon:SetTexture([[Interface\Spellbook\Spellbook-Icon]])
     Icon:SetWidth(58)
     Icon:SetHeight(58)
@@ -212,11 +265,13 @@ function Ledger:UI(Frame)
 
     local TopLeft = LedgerFrame:CreateTexture(nil, "ARTWORK")
     TopLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopLeft]])
+    TopLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopLeft]])
     TopLeft:SetWidth(256)
     TopLeft:SetHeight(256)
     TopLeft:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 0, 0)
 
     local TopRight = LedgerFrame:CreateTexture(nil, "ARTWORK")
+    TopRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopRight]])
     TopRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopRight]])
     TopRight:SetWidth(128)
     TopRight:SetHeight(256)
@@ -224,11 +279,13 @@ function Ledger:UI(Frame)
 
     local BottomLeft = LedgerFrame:CreateTexture(nil, "ARTWORK")
     BottomLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotLeft]])
+    BottomLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotLeft]])
     BottomLeft:SetWidth(256)
     BottomLeft:SetHeight(256)
     BottomLeft:SetPoint("BOTTOMLEFT", LedgerFrame, "BOTTOMLEFT", 0, 0)
 
     local BottomRight = LedgerFrame:CreateTexture(nil, "ARTWORK")
+    BottomRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotRight]])
     BottomRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotRight]])
     BottomRight:SetWidth(128)
     BottomRight:SetHeight(256)
@@ -258,15 +315,18 @@ function Ledger:UI(Frame)
     local normTex = PrevButton:CreateTexture(nil, "BACKGROUND")
     normTex:SetAllPoints()
     normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
+    normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
     PrevButton:SetNormalTexture(normTex)
 
     local pushTex = PrevButton:CreateTexture(nil, "BACKGROUND")
     pushTex:SetAllPoints()
     pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
+    pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
     PrevButton:SetPushedTexture(pushTex)
 
     local disableTex = PrevButton:CreateTexture(nil, "BACKGROUND")
     disableTex:SetAllPoints()
+    disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Disabled]])
     disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Disabled]])
     PrevButton:SetDisabledTexture(disableTex)
 
