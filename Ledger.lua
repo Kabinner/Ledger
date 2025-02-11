@@ -5,11 +5,6 @@ _G = setmetatable({
 }, {
     __index = _G
 })
-_G = setmetatable({
-    _G = _G
-}, {
-    __index = _G
-})
 setfenv(1, _G)
 
 -- Settings
@@ -43,7 +38,6 @@ function Debug:print(color, ...)
         return
     end
     local msg = ""
-    for idx, value in ipairs(arg) do
     for idx, value in ipairs(arg) do
         if type(value) == "table" then
             msg = msg .. tostring(value) .. " "
@@ -164,14 +158,10 @@ function Addon:dispatch(e)
         func = self.events[e]
         Debug:info("Addon:dispatch: ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
         Debug:info("Addon:dispatch: ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
-        Debug:info("Addon:dispatch: ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
         self:callback(func)
     end
 end
 function Addon:load()
-    self.Frame:SetScript('OnEvent', function()
-        self:dispatch(event)
-    end)
     self.Frame:SetScript('OnEvent', function()
         self:dispatch(event)
     end)
@@ -186,17 +176,9 @@ function Ledger:new()
     return setmetatable(Ledger, {
         __index = Ledger
     })
-    return setmetatable(Ledger, {
-        __index = Ledger
-    })
 end
 function Ledger:print(...)
     local msg = ""
-    for idx, value in ipairs(arg) do
-        if type(value) ~= "string" then
-            return
-        end
-        msg = msg .. value .. " "
     for idx, value in ipairs(arg) do
         if type(value) ~= "string" then
             return
@@ -207,13 +189,9 @@ function Ledger:print(...)
 end
 function Ledger:load(Frame)
     Debug:info("Ledger:load", "Frame", Frame)
-    Debug:info("Ledger:load", "Frame", Frame)
     self:print("Load.")
     self:UI(Frame)
-    self:UI(Frame)
 end
-
-function Ledger:enable(Frame)
 
 function Ledger:enable(Frame)
     self:print("Enable.")
@@ -234,17 +212,14 @@ function Ledger:enable(Frame)
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
         Debug:info("/ledger command.")
-        Debug:info("/ledger command.")
     end
 end
-function Ledger:disable()
 function Ledger:disable()
 end
 
 ledger = Ledger:new()
 addon = Addon:new(ledger)
 
-Debug:info("Ledger: ", ledger)
 Debug:info("Ledger: ", ledger)
 Debug:info("Ledger: ", ledger)
 
@@ -271,18 +246,9 @@ function Ledger:UI(Frame)
     LedgerFrame:SetScript("OnDragStop", function()
         LedgerFrame:StopMovingOrSizing()
     end)
-    LedgerFrame:SetScript("OnDragStart", function()
-        LedgerFrame:StartMoving()
-    end)
-    LedgerFrame:SetScript("OnDragStop", function()
-        LedgerFrame:StopMovingOrSizing()
-    end)
 
     local CloseButton = CreateFrame("Button", "FRAME_LEDGER_PANEL_BUTTON_CLOSE", LedgerFrame, "UIPanelCloseButton")
     CloseButton:SetPoint("CENTER", LedgerFrame, "TOPRIGHT", -44, -25)
-    CloseButton:SetScript("OnClick", function()
-        LedgerFrame:Hide()
-    end)
     CloseButton:SetScript("OnClick", function()
         LedgerFrame:Hide()
     end)
@@ -293,13 +259,11 @@ function Ledger:UI(Frame)
     local Icon = LedgerFrame:CreateTexture(nil, "BACKGROUND")
     Icon:SetTexture([[Interface\Spellbook\Spellbook-Icon]])
     Icon:SetTexture([[Interface\Spellbook\Spellbook-Icon]])
-    Icon:SetTexture([[Interface\Spellbook\Spellbook-Icon]])
     Icon:SetWidth(58)
     Icon:SetHeight(58)
     Icon:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 10, -8)
 
     local TopLeft = LedgerFrame:CreateTexture(nil, "ARTWORK")
-    TopLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopLeft]])
     TopLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopLeft]])
     TopLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopLeft]])
     TopLeft:SetWidth(256)
@@ -309,7 +273,6 @@ function Ledger:UI(Frame)
     local TopRight = LedgerFrame:CreateTexture(nil, "ARTWORK")
     TopRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopRight]])
     TopRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopRight]])
-    TopRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopRight]])
     TopRight:SetWidth(128)
     TopRight:SetHeight(256)
     TopRight:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", 0, 0)
@@ -317,13 +280,11 @@ function Ledger:UI(Frame)
     local BottomLeft = LedgerFrame:CreateTexture(nil, "ARTWORK")
     BottomLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotLeft]])
     BottomLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotLeft]])
-    BottomLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotLeft]])
     BottomLeft:SetWidth(256)
     BottomLeft:SetHeight(256)
     BottomLeft:SetPoint("BOTTOMLEFT", LedgerFrame, "BOTTOMLEFT", 0, 0)
 
     local BottomRight = LedgerFrame:CreateTexture(nil, "ARTWORK")
-    BottomRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotRight]])
     BottomRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotRight]])
     BottomRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotRight]])
     BottomRight:SetWidth(128)
@@ -344,9 +305,6 @@ function Ledger:UI(Frame)
         pages = {{"Page 1 Line 1", "Page 1 Line 2", "Page 1 Line 3"},
                  {"Page 2 Line 1", "Page 2 Line 2", "Page 2 Line 3"},
                  {"Page 3 Line 1", "Page 3 Line 2", "Page 3 Line 3"}}
-        pages = {{"Page 1 Line 1", "Page 1 Line 2", "Page 1 Line 3"},
-                 {"Page 2 Line 1", "Page 2 Line 2", "Page 2 Line 3"},
-                 {"Page 3 Line 1", "Page 3 Line 2", "Page 3 Line 3"}}
     }
 
     local PrevButton = CreateFrame("Button", "FRAME_LEDGER_PREV_BUTTON", LedgerFrame, "UIPanelButtonTemplate")
@@ -358,19 +316,16 @@ function Ledger:UI(Frame)
     normTex:SetAllPoints()
     normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
     normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
-    normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
     PrevButton:SetNormalTexture(normTex)
 
     local pushTex = PrevButton:CreateTexture(nil, "BACKGROUND")
     pushTex:SetAllPoints()
     pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
     pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
-    pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
     PrevButton:SetPushedTexture(pushTex)
 
     local disableTex = PrevButton:CreateTexture(nil, "BACKGROUND")
     disableTex:SetAllPoints()
-    disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Disabled]])
     disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Disabled]])
     disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Disabled]])
     PrevButton:SetDisabledTexture(disableTex)
@@ -388,43 +343,33 @@ function Ledger:UI(Frame)
     local normTex = NextButton:CreateTexture(nil, "BACKGROUND")
     normTex:SetAllPoints()
     normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
-    normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
     NextButton:SetNormalTexture(normTex)
 
     local pushTex = NextButton:CreateTexture(nil, "BACKGROUND")
     pushTex:SetAllPoints()
-    pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
     pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
     NextButton:SetPushedTexture(pushTex)
 
     local disableTex = NextButton:CreateTexture(nil, "BACKGROUND")
     disableTex:SetAllPoints()
     disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Disabled]])
-    disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Disabled]])
     NextButton:SetDisabledTexture(disableTex)
 
     NextButton:SetScript("OnClick", function()
-        PlaySound("igAbilityPageTurn")
         PlaySound("igAbilityPageTurn")
         Page:SetPage(Page.currentPage + 1)
     end)
 
     PrevButton:Disable()
     Debug:info("pages: ", table.getn(Page.pages))
-    PrevButton:Disable()
-    Debug:info("pages: ", table.getn(Page.pages))
     if table.getn(Page.pages) <= 1 then
         NextButton:Enable()
-        NextButton:Enable()
     end
-
 
     function Page:SetPage(page)
         self.currentPage = math.max(1, math.min(page, table.getn(self.pages)))
         PageText:SetText("Page " .. self.currentPage)
-        PageText:SetText("Page " .. self.currentPage)
         self:UpdatePageContent()
-
 
         -- Update button states
         if self.currentPage > 1 then
@@ -442,13 +387,11 @@ function Ledger:UI(Frame)
         local content = self.pages[self.currentPage] or {}
         for i = 1, 3 do
             _G["LedgerText" .. i]:SetText(content[i] or "")
-            _G["LedgerText" .. i]:SetText(content[i] or "")
         end
     end
 
     local textY = -70
     for i = 1, 3 do
-        local text = LedgerFrame:CreateFontString("LedgerText" .. i, "ARTWORK", "GameFontNormal")
         local text = LedgerFrame:CreateFontString("LedgerText" .. i, "ARTWORK", "GameFontNormal")
         text:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 30, textY)
         text:SetWidth(324)
@@ -458,149 +401,6 @@ function Ledger:UI(Frame)
     Page:UpdatePageContent()
     LedgerFrame:Show()
 end
-
--- -- Adjust text area dimensions and add scrollable content
--- local VISIBLE_LINES = 8
--- local LINE_HEIGHT = 16
--- local textYStart = -70
--- local textX = 30
-
--- -- Create scroll frame container
--- local ScrollFrame = CreateFrame("Frame", nil, LedgerFrame)
--- ScrollFrame:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", textX, textYStart)
--- ScrollFrame:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", -40, 100)
--- ScrollFrame:SetClipsChildren(true)
-
--- -- Create text lines within scroll frame
--- local textLines = {}
--- for i = 1, 12 do  -- Create 12 lines (4 more than visible for buffer)
---     local text = ScrollFrame:CreateFontString("LedgerText"..i, "ARTWORK", "GameFontNormal")
---     text:SetPoint("TOPLEFT", ScrollFrame, "TOPLEFT", 0, -(i-1)*LINE_HEIGHT)
---     text:SetWidth(300)
---     text:SetJustifyH("LEFT")
---     textLines[i] = text
--- end
-
--- -- Scrollbar construction
--- local ScrollBar = CreateFrame("Frame", nil, LedgerFrame)
--- ScrollBar:SetWidth(24)
--- ScrollBar:SetPoint("TOPRIGHT", ScrollFrame, "TOPRIGHT", 12, 0)
--- ScrollBar:SetPoint("BOTTOMRIGHT", ScrollFrame, "BOTTOMRIGHT", 12, 0)
-
--- -- Scroll track background
--- local Track = ScrollBar:CreateTexture(nil, "BACKGROUND")
--- Track:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar")
--- Track:SetTexCoord(0, 0.45, 0, 0.98)
--- Track:SetAllPoints()
-
--- -- Thumb texture
--- local Thumb = ScrollBar:CreateTexture(nil, "ARTWORK")
--- Thumb:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button")
--- Thumb:SetWidth(24)
--- Thumb:SetHeight(24)
-
--- -- Scroll buttons
--- local UpButton = CreateFrame("Button", nil, ScrollBar)
--- UpButton:SetWidth(24)
--- UpButton:SetHeight(24)
--- UpButton:SetPoint("TOP", ScrollBar, "TOP")
--- UpButton:SetNormalTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Up")
--- UpButton:SetPushedTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Down")
--- UpButton:SetDisabledTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Disabled")
-
--- local DownButton = CreateFrame("Button", nil, ScrollBar)
--- DownButton:SetWidth(24)
--- DownButton:SetHeight(24)
--- DownButton:SetPoint("BOTTOM", ScrollBar, "BOTTOM")
--- DownButton:SetNormalTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Down")
--- DownButton:SetPushedTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Down")
--- DownButton:SetDisabledTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Disabled")
-
--- -- Scrollbar logic
--- local currentScroll = 0
--- local maxScroll = 0
--- local isDragging = false
-
--- local function UpdateScroll()
---     maxScroll = math.max(0, #Page.pages[Page.currentPage] - VISIBLE_LINES)
---     currentScroll = math.min(currentScroll, maxScroll)
-
---     -- Update thumb position
---     local ratio = maxScroll > 0 and currentScroll / maxScroll or 0
---     Thumb:SetPoint("CENTER", ScrollBar, "TOP", 0, -ratio * (ScrollBar:GetHeight() - Thumb:GetHeight()) - 12)
-
---     -- Update text positions
---     for i = 1, #textLines do
---         local lineIndex = i + currentScroll
---         if lineIndex <= #Page.pages[Page.currentPage] then
---             textLines[i]:SetText(Page.pages[Page.currentPage][lineIndex] or "")
---             textLines[i]:Show()
---         else
---             textLines[i]:Hide()
---         end
---     end
-
---     -- Update button states
---     UpButton:SetEnabled(currentScroll > 0)
---     DownButton:SetEnabled(currentScroll < maxScroll)
--- end
-
--- -- Scrollbar interaction
--- UpButton:SetScript("OnClick", function()
---     currentScroll = math.max(0, currentScroll - 1)
---     UpdateScroll()
---     PlaySound("igAbilityPageTurn")
--- end)
-
--- DownButton:SetScript("OnClick", function()
---     currentScroll = math.min(maxScroll, currentScroll + 1)
---     UpdateScroll()
---     PlaySound("igAbilityPageTurn")
--- end)
-
--- Thumb:SetScript("OnMouseDown", function()
---     isDragging = true
---     this:GetParent():SetScript("OnUpdate", function()
---         if isDragging then
---             local _, y = GetCursorPosition()
---             local scale = this:GetEffectiveScale()
---             y = y / scale
-
---             local minY = this:GetTop() - ScrollBar:GetHeight() + Thumb:GetHeight()/2
---             local maxY = this:GetTop() - Thumb:GetHeight()/2
---             local ratio = (y - minY) / (maxY - minY)
-
---             currentScroll = math.floor(ratio * maxScroll + 0.5)
---             UpdateScroll()
---         end
---     end)
--- end)
-
--- Thumb:SetScript("OnMouseUp", function()
---     isDragging = false
---     this:GetParent():SetScript("OnUpdate", nil)
--- end)
-
--- -- Modify the Page table and functions:
--- local Page = {
---     currentPage = 1,
---     pages = {
---         {"Line 1", "Line 2", "Line 3", "Line 4", "Line 5", "Line 6", "Line 7", "Line 8", "Line 9", "Line 10"},
---         {"Page 2 Line 1", "Page 2 Line 2", "Page 2 Line 3"},
---         {"Page 3 Content 1", "Page 3 Content 2", "Page 3 Content 3", "Page 3 Content 4"}
---     }
--- }
-
--- function Page:SetPage(page)
---     self.currentPage = math.max(1, math.min(page, table.getn(self.pages)))
---     PageText:SetText("Page "..self.currentPage)
---     currentScroll = 0  -- Reset scroll when changing pages
---     UpdateScroll()
-
---     -- Keep original button state logic
---     PrevButton:SetEnabled(self.currentPage > 1)
---     NextButton:SetEnabled(self.currentPage < table.getn(self.pages))
--- end
 
 -- -- Adjust text area dimensions and add scrollable content
 -- local VISIBLE_LINES = 8
