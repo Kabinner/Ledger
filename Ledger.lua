@@ -117,7 +117,7 @@ end
 
 -- Addon lib
 function Addon:new(object)
-    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
+    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper(self.name), UIParent)
     Debug:log("Frame: ", self.Frame)
     self.object = object
     for function_name in self.object do
