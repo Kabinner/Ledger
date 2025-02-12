@@ -28,11 +28,16 @@ local Debug = {
     INFO="INFO",
     TRACE="TRACE"
 }
-function Debug:print(caller, level, color, ...)
-    if type(caller) == "object" and not caller.debug then
+function Debug:print(_, level, color, ...)
+    if type(_) ~= "string" and type(_) == "object" and not _.debug then
         return
     end
+
     local msg = ""
+    if type(_) == "string" then
+        msg = _
+    end
+    
     for idx, value in ipairs(arg) do
         if type(value) == "table" or type(value) == "function" then
             msg = msg .. id(value)
@@ -64,9 +69,9 @@ local _CreateFrame = CreateFrame
 CreateFrame = function(...)
     Frame = _CreateFrame(unpack(arg))
     function Frame:Texture(texture, width, height, opts)
-        Debug:log(self, texture, " ", width, " ",  height, " ",  opts)
+        Debug:log(texture, " ", width, " ",  height, " ",  opts)
         for func, args in pairs(opts) do
-            Debug:log(self, "function call", func, unpack(args))
+            Debug:log("function call", func, unpack(args))
         end
     end
 
@@ -74,14 +79,14 @@ CreateFrame = function(...)
 end
 
 
--- Addon lib
-local Addon = {
+-- Loader lib
+local Loader = {
     debug = true,
     LEVEL="TRACE",
 }
 
-function Addon:new(object)
-    Addon.__index = Addon
+function Loader:new(object)
+    Loader.__index = Loader
 
     local instance = {    
         name = "",
@@ -93,64 +98,67 @@ function Addon:new(object)
         object_map_reversed = {},
         object_map_lookup = {}
     }
-    setmetatable(instance, Addon)
-    Debug:trace(self, "Addon[",id(instance),"]:new")
+    setmetatable(instance, Loader)
+    Debug:trace(self, "Loader[",id(instance),"]:new")
     return instance
 end
-function Addon:map()
+function Loader:map()
     for function_name,func in pairs(self.object_index) do
         if function_name ~= "new" and type(func) == "function" then
             local callback = self.object_index[function_name]
-            Debug:trace(self, "Addon[",id(self),"]:map ", self.name, "[", id(self.object), "] ", self.name .. ":" .. function_name, " = ", callback)
+            Debug:trace(self, "Loader[",id(self),"]:map ", self.name, "[", id(self.object), "] ", self.name .. ":" .. function_name, " = ", callback)
             self.object_map[function_name] = callback
 
-            Debug:trace(self, "Addon[",id(self),"]:map ", self.name .. "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
+            Debug:trace(self, "Loader[",id(self),"]:map ", self.name .. "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
             self.object_map_reversed[id(callback)] = callback
 
             self.object_map_lookup[id(callback)] = function_name
         end
     end
 end
-function Addon:init(object)
+function Loader:init(object)
     self.name = object.name
     self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
     self.object_index = getmetatable(object).__index
     self.object = object
     
-    Debug:trace(self, "Addon[",id(self),"]:init ", self.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
+    Debug:trace(self, "Loader[",id(self),"]:init ", self.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
     self:map()
 end
 
-function Addon:on(event, callback)
-    Debug:trace(self, "Addon[",id(self),"]:on ", self.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+function Loader:on(event, callback)
+    Debug:trace(self, "Loader[",id(self),"]:on ", self.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
     self.Frame:RegisterEvent(event)
     self.events[event] = callback
 end
-function Addon:callback(callback, ...)
-    Debug:trace(self, "Addon[",id(self), "]:callback ", self.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
+function Loader:callback(callback, ...)
+    Debug:trace(self, "Loader[",id(self), "]:callback ", self.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
     return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
 end
-function Addon:dispatch(e)
+function Loader:dispatch(e)
+    local func = nil
     if e == "ADDON_LOADED" and arg1 == self.name then
-        self.object["load"](self.object, self.Frame)
+        func = self.object["load"]
     elseif e ~= "ADDON_LOADED" then
-        local func = self.events[e]
-        if func then
-            Debug:trace(self, "Addon[", id(self), "]:dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
-            self:callback(func)
-        end
+        func = self.events[e]
+    else
+        return
     end
+
+    Debug:trace(self, "Loader[", id(self), "]:dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
+    self:callback(func)
 end
-function Addon:run()
-    Debug:trace(self, "Addon[", id(self), "]:run ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
+function Loader:listen()
+    Debug:trace(self, "Loader[", id(self), "]:listen ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
 
     self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
 end
 
 -- Own code
 Ledger = {
-    name = "Ledger"
+    name = "Ledger",
+    LEVEL = "TRACE"
 }
 
 function Ledger:new()
@@ -177,12 +185,12 @@ function Ledger:print(...)
     DEFAULT_CHAT_FRAME:AddMessage(self.name .. ": " .. msg);
 end
 function Ledger:load(Frame)
-    Debug:trace(self, "Ledger[", id(self), "]:load Frame: ", Frame)
+    self:print("load Frame: ", Frame)
     self:UI(Frame)
 end
 
 function Ledger:enable(Frame)
-    self:print("Enable.")
+    self:print("Enable. Frame: ", Frame)
 
 
     -- Frame:CreateTexture(nil, "BACKGROUND")
@@ -204,7 +212,8 @@ function Ledger:disable()
 end
 
 Money = {
-    name = "Money"
+    name = "Money",
+    LEVEL = "TRACE"
 }
 function Money:new()
     Money.__index = Money
@@ -231,24 +240,24 @@ function Money:print(...)
 end
 
 function Money:enable(Frame)
-    self:print("Enable.")
+    self:print("Enable. Frame:", Frame)
 end
 
 
 ledger = Ledger:new()
-addon = Addon:new()
-addon:init(ledger)
-addon:on("ADDON_LOADED", ledger.load)
-addon:on("PLAYER_LOGIN", ledger.enable)
-addon:on("PLAYER_LOGOUT", ledger.disable)
-addon:run()
+Loader = Loader:new()
+Loader:init(ledger)
+Loader:on("ADDON_LOADED", ledger.load)
+Loader:on("PLAYER_LOGIN", ledger.enable)
+Loader:on("PLAYER_LOGOUT", ledger.disable)
+Loader:listen()
 
 
 money = Money:new()
-addon2 = Addon:new()
-addon2:init(money)
-addon2:on("PLAYER_LOGIN", money.enable)
-addon2:run()
+Loader2 = Loader:new()
+Loader2:init(money)
+Loader2:on("PLAYER_LOGIN", money.enable)
+Loader2:listen()
 
 
 
