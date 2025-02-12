@@ -76,7 +76,7 @@ function Debug:print(_, level, color, ...)
     end
     
     if type(_) == "table" and _.name then 
-        msg =  color .. "[".. level .."]: Loader[" .. id(_) .."]:"
+        msg =  color .. "[".. level .."] ".. _.name .."[" .. id(_) .."]:"
     end
     print(msg, unpack(arg))
 
@@ -118,7 +118,7 @@ function Loader:new(object)
     Loader.__index = Loader
 
     local instance = {    
-        name = "",
+        name = self.name,
         Frame = {},
         events = {},
         object = {},
@@ -146,7 +146,6 @@ function Loader:map()
     end
 end
 function Loader:init(object)
-    self.name = object.name
     self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
     self.object_index = getmetatable(object).__index
     self.object = object
@@ -175,7 +174,7 @@ function Loader:dispatch(e)
         return
     end
 
-    Debug:trace(self, "dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
+    Debug:trace(self, "dispatch ", e, " -> ", self.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
     self:callback(func)
 end
 function Loader:listen()
@@ -194,7 +193,6 @@ function Ledger:new()
     Ledger.__index = Ledger
     local instance = {}
     setmetatable(instance, Ledger)
-    Debug:trace(self, "Ledger[",id(instance),"]:new")
     return instance
 end
 
@@ -224,7 +222,6 @@ function Money:new()
     Money.__index = Money
     local instance = {}
     setmetatable(instance, Money)
-    Debug:trace(self, "Money[",id(instance),"]:new")
     return instance
 end
 
