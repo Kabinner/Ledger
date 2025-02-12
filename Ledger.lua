@@ -200,15 +200,6 @@ end
 function Ledger:enable(Frame)
     print(self, "Enable. Frame: ", Frame)
 
-
-    -- Frame:CreateTexture(nil, "BACKGROUND")
-    -- Icon:SetTexture('Interface\\Spellbook\\Spellbook-Icon')
-    -- Icon:SetWidth(58)
-    -- Icon:SetHeight(58)
-    -- Icon:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 10, -8)
-
-    -- Frame.Texture:BACKGROUND
-
     Frame:Texture([[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
 
     SLASH_LEDGER1 = "/ledger"
