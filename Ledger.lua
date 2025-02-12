@@ -7,18 +7,112 @@ _G = setmetatable({
 })
 setfenv(1, _G)
 
+local main = (function ()
+    -- Own code
+    Ledger = {
+        name = "Ledger",
+        DEBUG_LEVEL = "TRACE",
+        DEBUG = true,
+    }
+
+    function Ledger:new()
+        Ledger.__index = Ledger
+        local instance = {}
+        setmetatable(instance, Ledger)
+        Debug:trace(Ledger, "new")
+        return instance
+    end
+
+    function Ledger:load(Frame)
+        print(self, "load Frame: ", Frame)
+
+        Frame = self:Panel(Frame)
+        -- local Icon        = Frame:Texture("BACKGROUND", 58, 58, [[Interface\Spellbook\Spellbook-Icon]]).SetPoint("TOPLEFT", Frame, "TOPLEFT", 10, -8)
+        -- local TopLeft     = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopLeft]]).SetPoint("TOPLEFT", Frame, "TOPLEFT",0, 0)
+        -- local TopRight    = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopRight]]).SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
+        -- local BottomLeft  = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotLeft]]).SetPoint("BOTTOMLEFT", Frame, "BOTTOMRLEFT", 0, 0)
+        -- local BottomRight = Frame:Texture("ARTWORK", 128, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotRight]]).SetPoint("BOTTOMRIGHT", Frame, "BOTTOMRIGHT", 0, 0)
+
+    end
+
+    function Ledger:enable(Frame)
+        print(self, "Enable. Frame: ", Frame)
+
+        SLASH_LEDGER1 = "/ledger"
+        SlashCmdList["LEDGER"] = function(msg)
+            Debug:log(self, "/ledger command.")
+        end
+    end
+    function Ledger:disable()
+    end
+
+    Money = {
+        name = "Money",
+        DEBUG_LEVEL = "TRACE",
+        DEBUG = true,
+        money = 0,
+    }
+    function Money:new()
+        Money.__index = Money
+        local instance = {}
+        setmetatable(instance, Money)
+        Debug:trace(Money, "new")
+        return instance
+    end
+
+    function Money:enable(Frame)
+        self.money = GetMoney()
+        print(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
+    end
+
+    function Money:track(Frame, ...)
+        Debug:trace(self, "args: ", string.unpack(arg))
+        local money = GetMoney()
+        local difference = money - self.money
+        if difference ~= 0 then
+            local action = (difference > 0) and "Gained" or "Lost"
+            print(self, "track ", action, " ", math.abs(difference), " copper")
+        end
+        self.money = money
+    end
+
+    loader = Loader:new()
+    ledger = Ledger:new()
+    loader:init(ledger)
+    loader:on("ADDON_LOADED", ledger.load)
+    loader:on("PLAYER_LOGIN", ledger.enable)
+    loader:on("PLAYER_LOGOUT", ledger.disable)
+    loader:listen()
+
+
+    loader2 = Loader:new()
+    money = Money:new()
+    loader2:init(money)
+    loader2:on("PLAYER_LOGIN", money.enable)
+    loader2:on("PLAYER_MONEY", money.track)
+    loader2:hook("RepairAllItems", money.track)
+    loader2:hook("UseContainerItem", money.track)
+    loader2:hook("PickupMerchantItem", money.track)
+    loader2:hook("SendMail", money.track)
+    loader2:hook("PlaceAuctionBid", money.track)
+    loader2:hook("PickupPlayerMoney", money.track)
+    loader2:listen()
+
+
+end)
+
 
 -- Utils
-local function id(_)
+function id(_)
     return string.sub(tostring(_), -8)
 end
-local function len(_)
+function len(_)
     if type(_) == "table" and _["n"] then
         return table.getn(_)
     end
 end
 
-local string = setmetatable(string, {})
+string = setmetatable(string, {})
 function string.unpack(_)
     if type(_) ~= "table" or not table.getn(_) then
         return
@@ -30,7 +124,7 @@ function string.unpack(_)
     return unpack(args)
 end    
 
-local function print(_, ...)
+function print(_, ...)
     local msg = ""
 
     if type(_) == "table" then
@@ -60,7 +154,7 @@ end
 
 
 -- Debug
-local Debug = {
+Debug = {
     DEBUG_LEVEL="TRACE",
     INFO="INFO",
     TRACE="TRACE",
@@ -109,7 +203,7 @@ end
 
 
 -- Loader lib
-local Loader = {
+Loader = {
     name = "Loader",
     DEBUG = true,
     DEBUG_LEVEL="TRACE",
@@ -204,106 +298,7 @@ function Loader:listen()
     self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
 end
 
--- Own code
-Ledger = {
-    name = "Ledger",
-    DEBUG_LEVEL = "TRACE",
-    DEBUG = true,
-}
-
-function Ledger:new()
-    Ledger.__index = Ledger
-    local instance = {}
-    setmetatable(instance, Ledger)
-    Debug:trace(Ledger, "new")
-    return instance
-end
-
-function Ledger:load(Frame)
-    print(self, "load Frame: ", Frame)
-
-    Frame = self:Panel(Frame)
-    local Icon        = Frame:Texture("BACKGROUND", 58, 58, [[Interface\Spellbook\Spellbook-Icon]]).SetPoint("TOPLEFT", Frame, "TOPLEFT", 10, -8)
-    local TopLeft     = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopLeft]]).SetPoint("TOPLEFT", Frame, "TOPLEFT",0, 0)
-    local TopRight    = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopRight]]).SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
-    local BottomLeft  = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotLeft]]).SetPoint("BOTTOMLEFT", Frame, "BOTTOMRLEFT", 0, 0)
-    local BottomRight = Frame:Texture("ARTWORK", 128, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotRight]]).SetPoint("BOTTOMRIGHT", Frame, "BOTTOMRIGHT", 0, 0)
-
-end
-
-function Ledger:enable(Frame)
-    print(self, "Enable. Frame: ", Frame)
-
-    SLASH_LEDGER1 = "/ledger"
-    SlashCmdList["LEDGER"] = function(msg)
-        Debug:log(self, "/ledger command.")
-    end
-end
-function Ledger:disable()
-end
-
-Money = {
-    name = "Money",
-    DEBUG_LEVEL = "TRACE",
-    DEBUG = true,
-    money = 0,
-}
-function Money:new()
-    Money.__index = Money
-    local instance = {}
-    setmetatable(instance, Money)
-    Debug:trace(Money, "new")
-    return instance
-end
-
-function Money:enable(Frame)
-    self.money = GetMoney()
-    print(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
-end
-
-function Money:track(Frame, ...)
-    Debug:trace(self, "args: ", string.unpack(arg))
-    local money = GetMoney()
-    local difference = money - self.money
-    if difference ~= 0 then
-        local action = (difference > 0) and "Gained" or "Lost"
-        print(self, "track ", action, " ", math.abs(difference), " copper")
-    end
-    self.money = money
-end
-
-loader = Loader:new()
-ledger = Ledger:new()
-loader:init(ledger)
-loader:on("ADDON_LOADED", ledger.load)
-loader:on("PLAYER_LOGIN", ledger.enable)
-loader:on("PLAYER_LOGOUT", ledger.disable)
-loader:listen()
-
-
-loader2 = Loader:new()
-money = Money:new()
-loader2:init(money)
-loader2:on("PLAYER_LOGIN", money.enable)
-loader2:on("PLAYER_MONEY", money.track)
-loader2:hook("RepairAllItems", money.track)
-loader2:hook("UseContainerItem", money.track)
-loader2:hook("PickupMerchantItem", money.track)
-loader2:hook("SendMail", money.track)
-loader2:hook("PlaceAuctionBid", money.track)
-loader2:hook("PickupPlayerMoney", money.track)
-loader2:listen()
-
-
-
-
-
-
-
-
-
-
-
+main()
 
 -- @todo Scrollbar
 -- @todo Fill with text
