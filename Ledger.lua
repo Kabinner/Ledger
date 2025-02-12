@@ -32,13 +32,13 @@ local function print(_, ...)
 
     for idx, value in ipairs(arg) do
         if type(value) == "table" or type(value) == "function" then
-            msg = msg .. id(value) .. " "
+            msg = msg .. id(value)
         elseif type(value) == "boolean" then
-            msg = msg .. tostring(value) .. " "
+            msg = msg .. tostring(value)
         elseif value == nil then
-            msg = msg .. "nil" .. " "
+            msg = msg .. "nil"
         else
-            msg = msg .. value .. " "
+            msg = msg .. value
         end
     end
 
