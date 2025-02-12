@@ -53,7 +53,6 @@ local Addon = {
     debug = true,
     LEVEL="TRACE",
 }
-Addon.__index = Addon
 
 -- Utils
 local function id(_)
@@ -81,13 +80,13 @@ function Debug:print(level, color, ...)
     local msg = ""
     for idx, value in ipairs(arg) do
         if type(value) == "table" or type(value) == "function" then
-            msg = msg .. id(value) .. " "
+            msg = msg .. id(value)
         elseif type(value) == "boolean" or type(value) == "number" then
-            msg = msg .. tostring(value) .. " "
+            msg = msg .. tostring(value)
         elseif value == nil then
-            msg = msg .. "nil" .. " "
+            msg = msg .. "nil"
         else
-            msg = msg .. value .. " "
+            msg = msg .. value
         end
     end
     print(color .. " [".. level .."]: " .. msg)
@@ -119,6 +118,8 @@ end
 
 -- Addon lib
 function Addon:new(object)
+    Addon.__index = Addon
+
     local instance = {    
         name = "",
         Frame = {},
@@ -130,17 +131,17 @@ function Addon:new(object)
         object_map_lookup = {}
     }
     setmetatable(instance, Addon)
-    Debug:trace("Addon["..id(instance).."]:new")
+    Debug:trace("Addon[",id(instance),"]:new")
     return instance
 end
 function Addon:map()
     for function_name,func in pairs(self.object_index) do
         if function_name ~= "new" and type(func) == "function" then
             local callback = self.object_index[function_name]
-            Debug:trace("Addon["..id(self).."]:map", self.name .. "[" .. id(self.object) .. "]", self.name .. ":" .. function_name, "to: ", callback)
+            Debug:trace("Addon[",id(self),"]:map ", self.name, "[", id(self.object), "] ", self.name .. ":" .. function_name, " = ", callback)
             self.object_map[function_name] = callback
 
-            Debug:trace("Addon["..id(self).."]:map", self.name .. "[" .. id(self.object) .. "]", id(callback), " to: ", self.name .. ":" .. function_name)
+            Debug:trace("Addon[",id(self),"]:map ", self.name .. "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
             self.object_map_reversed[id(callback)] = callback
 
             self.object_map_lookup[id(callback)] = function_name
@@ -153,17 +154,17 @@ function Addon:init(object)
     self.object_index = getmetatable(object).__index
     self.object = object
     
-    Debug:trace("Addon["..id(self).."]:init", self.name .. "[" .. id(self.object) .. "/".. id(self.object_index) .."]", "Frame: ", self.Frame)
+    Debug:trace("Addon[",id(self),"]:init ", self.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
     self:map()
 end
 
 function Addon:on(event, callback)
-    Debug:trace("Addon["..id(self).."]:on", self.name .. "[".. id(self.object) .."]", event, self.object_map_lookup[id(callback)])
+    Debug:trace("Addon[",id(self),"]:on ", self.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
     self.Frame:RegisterEvent(event)
     self.events[event] = callback
 end
 function Addon:callback(callback, ...)
-    Debug:trace("Addon["..id(self).."]:callback", self.name .. "[".. id(self.object) .."]", self.object_map_lookup[id(callback)])
+    Debug:trace("Addon[",id(self), "]:callback ", self.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
     return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
 end
@@ -173,13 +174,13 @@ function Addon:dispatch(e)
     elseif e ~= "ADDON_LOADED" then
         local func = self.events[e]
         if func then
-            Debug:trace("Addon["..id(self).."]:dispatch", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], func)
+            Debug:trace("Addon[", id(self), "]:dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
             self:callback(func)
         end
     end
 end
 function Addon:run()
-    Debug:trace("Addon["..id(self).."]:run", self.name .. "[".. id(self.object) .."]", "frame", self.Frame)
+    Debug:trace("Addon[", id(self), "]:run ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
 
     self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
 end
@@ -188,12 +189,12 @@ end
 Ledger = {
     name = "Ledger"
 }
-Ledger.__index = Ledger
 
 function Ledger:new()
+    Ledger.__index = Ledger
     local instance = {}
     setmetatable(instance, Ledger)
-    Debug:trace("Ledger["..id(instance).."]:new")
+    Debug:trace("Ledger[",id(instance),"]:new")
     return instance
 end
 
@@ -201,24 +202,24 @@ function Ledger:print(...)
     local msg = ""
     for idx, value in ipairs(arg) do
         if type(value) == "table" or type(value) == "function" then
-            msg = msg .. id(value) .. " "
+            msg = msg .. id(value)
         elseif type(value) == "boolean" then
-            msg = msg .. tostring(value) .. " "
+            msg = msg .. tostring(value)
         elseif value == nil then
-            msg = msg .. "nil" .. " "
+            msg = msg .. "nil"
         else
-            msg = msg .. value .. " "
+            msg = msg .. value
         end
     end
     DEFAULT_CHAT_FRAME:AddMessage(self.name .. ": " .. msg);
 end
 function Ledger:load(Frame)
-    Debug:trace("Ledger["..id(self).."]:load", Frame)
+    Debug:trace("Ledger[", id(self), "]:load Frame: ", Frame)
     self:UI(Frame)
 end
 
 function Ledger:enable(Frame)
-    self:print(self.name, "Enable.")
+    self:print("Enable.")
 
 
     -- Frame:CreateTexture(nil, "BACKGROUND")
@@ -253,16 +254,14 @@ addon:run()
 Money = {
     name = "Money"
 }
+function Money:new()
+    Money.__index = Money
+    local instance = {}
+    setmetatable(instance, Money)
+    Debug:trace("Money[",id(instance),"]:new")
+    return instance
+end
 
-
--- local Money = {
---     name = "Money"
--- }
--- function Money:new()
---     return setmetatable(Money, {
---         __index = Money
---     })
--- end
 function Money:print(...)
     local msg = ""
     for idx, value in ipairs(arg) do
@@ -280,14 +279,7 @@ function Money:print(...)
 end
 
 function Money:enable(Frame)
-    self:print(self.name, "Enable.")
-end
-Money.__index = Money
-function Money:new()
-    local instance = {}
-    setmetatable(instance, Money)
-    Debug:trace("Money["..id(instance).."]:new")
-    return instance
+    self:print("Enable.")
 end
 
 money = Money:new()
