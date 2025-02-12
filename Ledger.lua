@@ -222,12 +222,13 @@ end
 function Ledger:load(Frame)
     print(self, "load Frame: ", Frame)
 
-    Frame = self:UI(Frame)
-    local Icon        = Frame:Texture("BACKGROUND", 58, 58, [[Interface\Spellbook\Spellbook-Icon]], {SetPoint={"TOPLEFT", 10, -8}})
-    local TopLeft     = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopLeft]], {SetPoint={"TOPLEFT", 0, 0}})
-    local TopRight    = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopRight]], {SetPoint={"TOPRIGHT", 0, 0}})
-    local BottomLeft  = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotLeft]], {SetPoint={"BOTTOMLEFT", 0, 0}})
-    local BottomRight = Frame:Texture("ARTWORK", 128, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotRight]], {SetPoint={"BOTTOMRIGHT", 0, 0}})
+    Frame = self:Panel(Frame)
+    local Icon        = Frame:Texture("BACKGROUND", 58, 58, [[Interface\Spellbook\Spellbook-Icon]]).SetPoint("TOPLEFT", Frame, "TOPLEFT", 10, -8)
+    local TopLeft     = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopLeft]]).SetPoint("TOPLEFT", Frame, "TOPLEFT",0, 0)
+    local TopRight    = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopRight]]).SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
+    local BottomLeft  = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotLeft]]).SetPoint("BOTTOMLEFT", Frame, "BOTTOMRLEFT", 0, 0)
+    local BottomRight = Frame:Texture("ARTWORK", 128, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotRight]]).SetPoint("BOTTOMRIGHT", Frame, "BOTTOMRIGHT", 0, 0)
+
 end
 
 function Ledger:enable(Frame)
@@ -307,7 +308,7 @@ loader2:listen()
 -- @todo Scrollbar
 -- @todo Fill with text
 -- @todo Layout 
-function Ledger:UI(Frame)
+function Ledger:Panel(Frame)
     local LedgerFrame = CreateFrame("Frame", "FRAME_LEDGER_PANEL", Frame)
     LedgerFrame:SetWidth(384)
     LedgerFrame:SetHeight(512)
