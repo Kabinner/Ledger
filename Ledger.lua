@@ -61,12 +61,12 @@ end
 
 -- Debug
 local Debug = {
-    LEVEL="TRACE",
+    DEBUG_LEVEL="TRACE",
     INFO="INFO",
     TRACE="TRACE",
 }
 function Debug:print(_, level, color, ...)
-    if type(_) == "table" and not _.debug then
+    if type(_) == "table" and not _.DEBUG then
         return
     end
 
@@ -85,7 +85,7 @@ function Debug:log(caller, ...)
     self:print(caller, Debug.INFO, "|cffffd700", unpack(arg))
 end
 function Debug:trace(caller, ...)
-    if not caller or caller.LEVEL ~= self.TRACE then
+    if not caller or caller.DEBUG_LEVEL ~= self.TRACE then
         return
     end
     self:print(caller, Debug.TRACE, "|cffffd700", unpack(arg))
@@ -111,8 +111,8 @@ end
 -- Loader lib
 local Loader = {
     name = "Loader",
-    debug = true,
-    LEVEL="TRACE",
+    DEBUG = true,
+    DEBUG_LEVEL="TRACE",
 }
 function Loader:new(object)
     Loader.__index = Loader
@@ -166,7 +166,7 @@ function Loader:callback(callback, ...)
 end
 function Loader:dispatch(e)
     local func = nil
-    if e == "ADDON_LOADED" and arg1 == self.name then
+    if e == "ADDON_LOADED" and arg1 == self.object.name then
         func = self.object["load"]
     elseif e ~= "ADDON_LOADED" then
         func = self.events[e]
@@ -174,11 +174,11 @@ function Loader:dispatch(e)
         return
     end
 
-    Debug:trace(self, "dispatch ", e, " -> ", self.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
+    Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
     self:callback(func)
 end
 function Loader:listen()
-    Debug:trace(self, "listen ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
+    Debug:trace(self, "listen ", self.object.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
 
     self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
 end
@@ -186,8 +186,8 @@ end
 -- Own code
 Ledger = {
     name = "Ledger",
-    LEVEL = "TRACE",
-    debug = true,
+    DEBUG_LEVEL = "TRACE",
+    DEBUG = true,
 }
 
 function Ledger:new()
@@ -218,8 +218,8 @@ end
 
 Money = {
     name = "Money",
-    LEVEL = "TRACE",
-    debug = true,
+    DEBUG_LEVEL = "TRACE",
+    DEBUG = true,
 
 }
 function Money:new()
