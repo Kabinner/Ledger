@@ -135,10 +135,10 @@ function Loader:map()
     for function_name,func in pairs(self.object_index) do
         if function_name ~= "new" and type(func) == "function" then
             local callback = self.object_index[function_name]
-            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", function_name, " = ", callback)
+            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", self.object.name, ".", function_name, " = ", callback)
             self.object_map[function_name] = callback
 
-            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
+            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", id(callback), " = ", self.object.name, ".", function_name)
             self.object_map_reversed[id(callback)] = callback
 
             self.object_map_lookup[id(callback)] = function_name
@@ -186,13 +186,15 @@ end
 -- Own code
 Ledger = {
     name = "Ledger",
-    LEVEL = "TRACE"
+    LEVEL = "TRACE",
+    debug = true,
 }
 
 function Ledger:new()
     Ledger.__index = Ledger
     local instance = {}
     setmetatable(instance, Ledger)
+    Debug:trace(Ledger, "new")
     return instance
 end
 
@@ -216,12 +218,15 @@ end
 
 Money = {
     name = "Money",
-    LEVEL = "TRACE"
+    LEVEL = "TRACE",
+    debug = true,
+
 }
 function Money:new()
     Money.__index = Money
     local instance = {}
     setmetatable(instance, Money)
+    Debug:trace(Money, "new")
     return instance
 end
 
