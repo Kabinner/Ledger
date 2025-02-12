@@ -97,7 +97,7 @@ end
 local _CreateFrame = CreateFrame
 CreateFrame = function(...)
     Frame = _CreateFrame(unpack(arg))
-    function Frame:Texture(type, texture, width, height, opts)
+    function Frame:Texture(type, width, height, texture, opts)
         Debug:log(type, " ", texture, " ", width, " ",  height, " ",  opts)
         for func, args in pairs(opts) do
             Debug:log("function call: ", func, " ", string.unpack(args))
@@ -221,13 +221,17 @@ end
 
 function Ledger:load(Frame)
     print(self, "load Frame: ", Frame)
-    self:UI(Frame)
+
+    Frame = self:UI(Frame)
+    local Icon        = Frame:Texture("BACKGROUND", 58, 58, [[Interface\Spellbook\Spellbook-Icon]], {SetPoint={"TOPLEFT", 10, -8}})
+    local TopLeft     = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopLeft]], {SetPoint={"TOPLEFT", 0, 0}})
+    local TopRight    = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopRight]], {SetPoint={"TOPRIGHT", 0, 0}})
+    local BottomLeft  = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotLeft]], {SetPoint={"BOTTOMLEFT", 0, 0}})
+    local BottomRight = Frame:Texture("ARTWORK", 128, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotRight]], {SetPoint={"BOTTOMRIGHT", 0, 0}})
 end
 
 function Ledger:enable(Frame)
     print(self, "Enable. Frame: ", Frame)
-
-    Frame:Texture("BACKGROUND", [[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
 
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
