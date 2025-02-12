@@ -68,7 +68,6 @@ local Debug = {
     LEVEL="TRACE",
     INFO="INFO",
     TRACE="TRACE",
-    UNPACK="__UNPACK"
 }
 function Debug:print(_, level, color, ...)
     if type(_) == "table" and not _.debug then
