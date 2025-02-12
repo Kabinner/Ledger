@@ -20,8 +20,12 @@ end
 local function print(_, ...)
     local msg = ""
 
-    if type(_) == "table" and _.name then
-        msg = _.name .. ": "
+    if type(_) == "table" then
+        if _.name then
+            msg = _.name .. ": "
+        else
+            msg = id(_)
+        end
     elseif type(_) == "string" then
         msg = _
     end
