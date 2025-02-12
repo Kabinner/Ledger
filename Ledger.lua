@@ -91,8 +91,8 @@ end
 local _CreateFrame = CreateFrame
 CreateFrame = function(...)
     Frame = _CreateFrame(unpack(arg))
-    function Frame:Texture(texture, width, height, opts)
-        Debug:log(texture, " ", width, " ",  height, " ",  opts)
+    function Frame:Texture(type, texture, width, height, opts)
+        Debug:log(type, " ", texture, " ", width, " ",  height, " ",  opts)
         for func, args in pairs(opts) do
             Debug:log("function call", func, unpack(args))
         end
@@ -200,7 +200,7 @@ end
 function Ledger:enable(Frame)
     print(self, "Enable. Frame: ", Frame)
 
-    Frame:Texture([[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
+    Frame:Texture("BACKGROUND", [[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
 
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
