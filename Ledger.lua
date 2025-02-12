@@ -17,6 +17,19 @@ local function len(_)
         return table.getn(_)
     end
 end
+
+local string = setmetatable(string, {})
+function string.unpack(_)
+    if not table.getn(_) then
+        return
+    end
+    args = {}
+    for idx, value in ipairs(_) do
+        args[idx] = value .. " "
+    end  
+    return unpack(args)
+end    
+
 local function print(_, ...)
     local msg = ""
 
@@ -33,11 +46,15 @@ local function print(_, ...)
     for idx, value in ipairs(arg) do
         if type(value) == "table" or type(value) == "function" then
             msg = msg .. id(value)
-        elseif type(value) == "boolean" then
+        elseif type(value) == "boolean" or type(value) == "number" then
             msg = msg .. tostring(value)
         elseif value == nil then
             msg = msg .. "nil"
         else
+            if msg == "__UNPACK" then
+                DEFAULT_CHAT_FRAME:AddMessage("testing");
+
+            end
             msg = msg .. value
         end
     end
@@ -45,14 +62,16 @@ local function print(_, ...)
     DEFAULT_CHAT_FRAME:AddMessage(msg);
 end
 
+
 -- Debug
 local Debug = {
     LEVEL="TRACE",
     INFO="INFO",
-    TRACE="TRACE"
+    TRACE="TRACE",
+    UNPACK="__UNPACK"
 }
 function Debug:print(_, level, color, ...)
-    if type(_) ~= "string" and type(_) == "object" and not _.debug then
+    if type(_) == "table" and not _.debug then
         return
     end
 
@@ -61,18 +80,10 @@ function Debug:print(_, level, color, ...)
         msg = _
     end
     
-    for idx, value in ipairs(arg) do
-        if type(value) == "table" or type(value) == "function" then
-            msg = msg .. id(value)
-        elseif type(value) == "boolean" or type(value) == "number" then
-            msg = msg .. tostring(value)
-        elseif value == nil then
-            msg = msg .. "nil"
-        else
-            msg = msg .. value
-        end
+    if type(_) == "table" and _.name then 
+        msg =  color .. "[".. level .."]: Loader[" .. id(_) .."]:"
     end
-    print(color .. " [".. level .."]: " .. msg)
+    print(msg, unpack(arg))
 
 end
 function Debug:log(caller, ...)
@@ -94,7 +105,7 @@ CreateFrame = function(...)
     function Frame:Texture(type, texture, width, height, opts)
         Debug:log(type, " ", texture, " ", width, " ",  height, " ",  opts)
         for func, args in pairs(opts) do
-            Debug:log("function call", func, unpack(args))
+            Debug:log("function call: ", func, " ", string.unpack(args))
         end
     end
 
@@ -104,10 +115,10 @@ end
 
 -- Loader lib
 local Loader = {
+    name = "Loader",
     debug = true,
     LEVEL="TRACE",
 }
-
 function Loader:new(object)
     Loader.__index = Loader
 
@@ -122,17 +133,17 @@ function Loader:new(object)
         object_map_lookup = {}
     }
     setmetatable(instance, Loader)
-    Debug:trace(self, "Loader[",id(instance),"]:new")
+    Debug:trace(Loader, "new")
     return instance
 end
 function Loader:map()
     for function_name,func in pairs(self.object_index) do
         if function_name ~= "new" and type(func) == "function" then
             local callback = self.object_index[function_name]
-            Debug:trace(self, "Loader[",id(self),"]:map ", self.name, "[", id(self.object), "] ", self.name .. ":" .. function_name, " = ", callback)
+            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", function_name, " = ", callback)
             self.object_map[function_name] = callback
 
-            Debug:trace(self, "Loader[",id(self),"]:map ", self.name .. "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
+            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
             self.object_map_reversed[id(callback)] = callback
 
             self.object_map_lookup[id(callback)] = function_name
@@ -145,17 +156,17 @@ function Loader:init(object)
     self.object_index = getmetatable(object).__index
     self.object = object
     
-    Debug:trace(self, "Loader[",id(self),"]:init ", self.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
+    Debug:trace(self, "init ", self.object.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
     self:map()
 end
 
 function Loader:on(event, callback)
-    Debug:trace(self, "Loader[",id(self),"]:on ", self.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+    Debug:trace(self, "on ", self.object.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
     self.Frame:RegisterEvent(event)
     self.events[event] = callback
 end
 function Loader:callback(callback, ...)
-    Debug:trace(self, "Loader[",id(self), "]:callback ", self.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
+    Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
     return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
 end
@@ -169,11 +180,11 @@ function Loader:dispatch(e)
         return
     end
 
-    Debug:trace(self, "Loader[", id(self), "]:dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
+    Debug:trace(self, "dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
     self:callback(func)
 end
 function Loader:listen()
-    Debug:trace(self, "Loader[", id(self), "]:listen ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
+    Debug:trace(self, "listen ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
 
     self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
 end
