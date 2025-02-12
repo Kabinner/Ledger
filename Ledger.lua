@@ -7,6 +7,262 @@ _G = setmetatable({
 })
 setfenv(1, _G)
 
+
+-- Utils
+local function id(_)
+    return string.sub(tostring(_), -8)
+end
+local function print(msg)
+    DEFAULT_CHAT_FRAME:AddMessage(msg)
+end
+local function len(_)
+    if type(_) == "table" and _["n"] then
+        return table.getn(_)
+    end
+end
+
+
+-- Debug
+local Debug = {
+    LEVEL="TRACE",
+    INFO="INFO",
+    TRACE="TRACE"
+}
+function Debug:print(caller, level, color, ...)
+    if type(caller) == "object" and not caller.debug then
+        return
+    end
+    local msg = ""
+    for idx, value in ipairs(arg) do
+        if type(value) == "table" or type(value) == "function" then
+            msg = msg .. id(value)
+        elseif type(value) == "boolean" or type(value) == "number" then
+            msg = msg .. tostring(value)
+        elseif value == nil then
+            msg = msg .. "nil"
+        else
+            msg = msg .. value
+        end
+    end
+    print(color .. " [".. level .."]: " .. msg)
+
+end
+function Debug:log(caller, ...)
+    self:print(caller, Debug.INFO, "|cffffd700", unpack(arg))
+end
+function Debug:trace(caller, ...)
+    if not caller or caller.LEVEL ~= self.TRACE then
+        return
+    end
+    self:print(caller, Debug.TRACE, "|cffffd700", unpack(arg))
+end
+
+
+
+-- API Hooks
+local _CreateFrame = CreateFrame
+CreateFrame = function(...)
+    Frame = _CreateFrame(unpack(arg))
+    function Frame:Texture(texture, width, height, opts)
+        Debug:log(self, texture, " ", width, " ",  height, " ",  opts)
+        for func, args in pairs(opts) do
+            Debug:log(self, "function call", func, unpack(args))
+        end
+    end
+
+    return Frame
+end
+
+
+-- Addon lib
+local Addon = {
+    debug = true,
+    LEVEL="TRACE",
+}
+
+function Addon:new(object)
+    Addon.__index = Addon
+
+    local instance = {    
+        name = "",
+        Frame = {},
+        events = {},
+        object = {},
+        object_index = {},
+        object_map = {},
+        object_map_reversed = {},
+        object_map_lookup = {}
+    }
+    setmetatable(instance, Addon)
+    Debug:trace(self, "Addon[",id(instance),"]:new")
+    return instance
+end
+function Addon:map()
+    for function_name,func in pairs(self.object_index) do
+        if function_name ~= "new" and type(func) == "function" then
+            local callback = self.object_index[function_name]
+            Debug:trace(self, "Addon[",id(self),"]:map ", self.name, "[", id(self.object), "] ", self.name .. ":" .. function_name, " = ", callback)
+            self.object_map[function_name] = callback
+
+            Debug:trace(self, "Addon[",id(self),"]:map ", self.name .. "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
+            self.object_map_reversed[id(callback)] = callback
+
+            self.object_map_lookup[id(callback)] = function_name
+        end
+    end
+end
+function Addon:init(object)
+    self.name = object.name
+    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
+    self.object_index = getmetatable(object).__index
+    self.object = object
+    
+    Debug:trace(self, "Addon[",id(self),"]:init ", self.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
+    self:map()
+end
+
+function Addon:on(event, callback)
+    Debug:trace(self, "Addon[",id(self),"]:on ", self.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+    self.Frame:RegisterEvent(event)
+    self.events[event] = callback
+end
+function Addon:callback(callback, ...)
+    Debug:trace(self, "Addon[",id(self), "]:callback ", self.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
+
+    return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
+end
+function Addon:dispatch(e)
+    if e == "ADDON_LOADED" and arg1 == self.name then
+        self.object["load"](self.object, self.Frame)
+    elseif e ~= "ADDON_LOADED" then
+        local func = self.events[e]
+        if func then
+            Debug:trace(self, "Addon[", id(self), "]:dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
+            self:callback(func)
+        end
+    end
+end
+function Addon:run()
+    Debug:trace(self, "Addon[", id(self), "]:run ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
+
+    self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
+end
+
+-- Own code
+Ledger = {
+    name = "Ledger"
+}
+
+function Ledger:new()
+    Ledger.__index = Ledger
+    local instance = {}
+    setmetatable(instance, Ledger)
+    Debug:trace(self, "Ledger[",id(instance),"]:new")
+    return instance
+end
+
+function Ledger:print(...)
+    local msg = ""
+    for idx, value in ipairs(arg) do
+        if type(value) == "table" or type(value) == "function" then
+            msg = msg .. id(value)
+        elseif type(value) == "boolean" then
+            msg = msg .. tostring(value)
+        elseif value == nil then
+            msg = msg .. "nil"
+        else
+            msg = msg .. value
+        end
+    end
+    DEFAULT_CHAT_FRAME:AddMessage(self.name .. ": " .. msg);
+end
+function Ledger:load(Frame)
+    Debug:trace(self, "Ledger[", id(self), "]:load Frame: ", Frame)
+    self:UI(Frame)
+end
+
+function Ledger:enable(Frame)
+    self:print("Enable.")
+
+
+    -- Frame:CreateTexture(nil, "BACKGROUND")
+    -- Icon:SetTexture('Interface\\Spellbook\\Spellbook-Icon')
+    -- Icon:SetWidth(58)
+    -- Icon:SetHeight(58)
+    -- Icon:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 10, -8)
+
+    -- Frame.Texture:BACKGROUND
+
+    Frame:Texture([[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
+
+    SLASH_LEDGER1 = "/ledger"
+    SlashCmdList["LEDGER"] = function(msg)
+        Debug:log(self, "/ledger command.")
+    end
+end
+function Ledger:disable()
+end
+
+Money = {
+    name = "Money"
+}
+function Money:new()
+    Money.__index = Money
+    local instance = {}
+    setmetatable(instance, Money)
+    Debug:trace(self, "Money[",id(instance),"]:new")
+    return instance
+end
+
+function Money:print(...)
+    local msg = ""
+    for idx, value in ipairs(arg) do
+        if type(value) == "table" or type(value) == "function" then
+            msg = msg .. id(value) .. " "
+        elseif type(value) == "boolean" then
+            msg = msg .. tostring(value) .. " "
+        elseif value == nil then
+            msg = msg .. "nil" .. " "
+        else
+            msg = msg .. value .. " "
+        end
+    end
+    DEFAULT_CHAT_FRAME:AddMessage(self.name .. ": " .. msg);
+end
+
+function Money:enable(Frame)
+    self:print("Enable.")
+end
+
+
+ledger = Ledger:new()
+addon = Addon:new()
+addon:init(ledger)
+addon:on("ADDON_LOADED", ledger.load)
+addon:on("PLAYER_LOGIN", ledger.enable)
+addon:on("PLAYER_LOGOUT", ledger.disable)
+addon:run()
+
+
+money = Money:new()
+addon2 = Addon:new()
+addon2:init(money)
+addon2:on("PLAYER_LOGIN", money.enable)
+addon2:run()
+
+
+
+
+
+
+
+
+
+
+
+
+-- @TODO
+
 -- Table to store original functions
 local hookedFunctions = {}
 
@@ -47,247 +303,6 @@ frame:RegisterEvent("PLAYER_MONEY")
 frame:SetScript("OnEvent", function() checkGoldChange("Loot / Trade") end)
 
 
-
--- Settings
-local Addon = {
-    debug = true,
-    LEVEL="TRACE",
-}
-
--- Utils
-local function id(_)
-    return string.sub(tostring(_), -8)
-end
-local function print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage(msg)
-end
-local function len(_)
-    if type(_) == "table" and _["n"] then
-        return table.getn(_)
-    end
-end
-
--- Debug
-local Debug = {
-    LEVEL="TRACE",
-    INFO="INFO",
-    TRACE="TRACE"
-}
-function Debug:print(level, color, ...)
-    if not Addon.debug then
-        return
-    end
-    local msg = ""
-    for idx, value in ipairs(arg) do
-        if type(value) == "table" or type(value) == "function" then
-            msg = msg .. id(value)
-        elseif type(value) == "boolean" or type(value) == "number" then
-            msg = msg .. tostring(value)
-        elseif value == nil then
-            msg = msg .. "nil"
-        else
-            msg = msg .. value
-        end
-    end
-    print(color .. " [".. level .."]: " .. msg)
-
-end
-function Debug:log(...)
-    self:print(Debug.INFO, "|cffffd700", unpack(arg))
-end
-function Debug:trace(...)
-    if Addon.LEVEL ~= self.TRACE then
-        return
-    end
-    self:print(Debug.TRACE, "|cffffd700", unpack(arg))
-end
-
--- API Hooks
-local _CreateFrame = CreateFrame
-CreateFrame = function(...)
-    Frame = _CreateFrame(unpack(arg))
-    function Frame:Texture(texture, width, height, opts)
-        Debug:log(texture, width, height, opts)
-        for func, args in pairs(opts) do
-            Debug:log("function call", func, unpack(args))
-        end
-    end
-
-    return Frame
-end
-
--- Addon lib
-function Addon:new(object)
-    Addon.__index = Addon
-
-    local instance = {    
-        name = "",
-        Frame = {},
-        events = {},
-        object = {},
-        object_index = {},
-        object_map = {},
-        object_map_reversed = {},
-        object_map_lookup = {}
-    }
-    setmetatable(instance, Addon)
-    Debug:trace("Addon[",id(instance),"]:new")
-    return instance
-end
-function Addon:map()
-    for function_name,func in pairs(self.object_index) do
-        if function_name ~= "new" and type(func) == "function" then
-            local callback = self.object_index[function_name]
-            Debug:trace("Addon[",id(self),"]:map ", self.name, "[", id(self.object), "] ", self.name .. ":" .. function_name, " = ", callback)
-            self.object_map[function_name] = callback
-
-            Debug:trace("Addon[",id(self),"]:map ", self.name .. "[", id(self.object), "] ", id(callback), " = ", self.name, ":", function_name)
-            self.object_map_reversed[id(callback)] = callback
-
-            self.object_map_lookup[id(callback)] = function_name
-        end
-    end
-end
-function Addon:init(object)
-    self.name = object.name
-    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
-    self.object_index = getmetatable(object).__index
-    self.object = object
-    
-    Debug:trace("Addon[",id(self),"]:init ", self.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
-    self:map()
-end
-
-function Addon:on(event, callback)
-    Debug:trace("Addon[",id(self),"]:on ", self.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
-    self.Frame:RegisterEvent(event)
-    self.events[event] = callback
-end
-function Addon:callback(callback, ...)
-    Debug:trace("Addon[",id(self), "]:callback ", self.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
-
-    return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
-end
-function Addon:dispatch(e)
-    if e == "ADDON_LOADED" and arg1 == self.name then
-        self.object["load"](self.object, self.Frame)
-    elseif e ~= "ADDON_LOADED" then
-        local func = self.events[e]
-        if func then
-            Debug:trace("Addon[", id(self), "]:dispatch ", e, " -> ", self.name .. ":" .. self.object_map_lookup[id(func)], "[", func, "]")
-            self:callback(func)
-        end
-    end
-end
-function Addon:run()
-    Debug:trace("Addon[", id(self), "]:run ", self.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
-
-    self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
-end
-
--- Addon implementation
-Ledger = {
-    name = "Ledger"
-}
-
-function Ledger:new()
-    Ledger.__index = Ledger
-    local instance = {}
-    setmetatable(instance, Ledger)
-    Debug:trace("Ledger[",id(instance),"]:new")
-    return instance
-end
-
-function Ledger:print(...)
-    local msg = ""
-    for idx, value in ipairs(arg) do
-        if type(value) == "table" or type(value) == "function" then
-            msg = msg .. id(value)
-        elseif type(value) == "boolean" then
-            msg = msg .. tostring(value)
-        elseif value == nil then
-            msg = msg .. "nil"
-        else
-            msg = msg .. value
-        end
-    end
-    DEFAULT_CHAT_FRAME:AddMessage(self.name .. ": " .. msg);
-end
-function Ledger:load(Frame)
-    Debug:trace("Ledger[", id(self), "]:load Frame: ", Frame)
-    self:UI(Frame)
-end
-
-function Ledger:enable(Frame)
-    self:print("Enable.")
-
-
-    -- Frame:CreateTexture(nil, "BACKGROUND")
-    -- Icon:SetTexture('Interface\\Spellbook\\Spellbook-Icon')
-    -- Icon:SetWidth(58)
-    -- Icon:SetHeight(58)
-    -- Icon:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 10, -8)
-
-    -- Frame.Texture:BACKGROUND
-
-    Frame:Texture([[Interface\Spellbook\Spellbook-Icon]], 58, 58, {SetPoint={"TOPLEFT", 10, -8}})
-
-    SLASH_LEDGER1 = "/ledger"
-    SlashCmdList["LEDGER"] = function(msg)
-        Debug:log("/ledger command.")
-    end
-end
-function Ledger:disable()
-end
-
-ledger = Ledger:new()
-addon = Addon:new()
-
-addon:init(ledger)
-addon:on("ADDON_LOADED", ledger.load)
-addon:on("PLAYER_LOGIN", ledger.enable)
-addon:on("PLAYER_LOGOUT", ledger.disable)
-addon:run()
-
-
-
-Money = {
-    name = "Money"
-}
-function Money:new()
-    Money.__index = Money
-    local instance = {}
-    setmetatable(instance, Money)
-    Debug:trace("Money[",id(instance),"]:new")
-    return instance
-end
-
-function Money:print(...)
-    local msg = ""
-    for idx, value in ipairs(arg) do
-        if type(value) == "table" or type(value) == "function" then
-            msg = msg .. id(value) .. " "
-        elseif type(value) == "boolean" then
-            msg = msg .. tostring(value) .. " "
-        elseif value == nil then
-            msg = msg .. "nil" .. " "
-        else
-            msg = msg .. value .. " "
-        end
-    end
-    DEFAULT_CHAT_FRAME:AddMessage(self.name .. ": " .. msg);
-end
-
-function Money:enable(Frame)
-    self:print("Enable.")
-end
-
-money = Money:new()
-addon2 = Addon:new()
-
-addon2:init(money)
-addon2:on("PLAYER_LOGIN", money.enable)
-addon2:run()
 
 
 function Ledger:UI(Frame)
@@ -451,6 +466,8 @@ function Ledger:UI(Frame)
     Page:UpdatePageContent()
     LedgerFrame:Show()
 end
+
+
 
 -- -- Adjust text area dimensions and add scrollable content
 -- local VISIBLE_LINES = 8
