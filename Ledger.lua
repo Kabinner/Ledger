@@ -67,6 +67,11 @@ end
 local function print(msg)
     DEFAULT_CHAT_FRAME:AddMessage(msg)
 end
+local function len(_)
+    if type(_) == "table" and _["n"] then
+        return table.getn(_)
+    end
+end
 
 -- Debug
 local Debug = {
@@ -99,38 +104,6 @@ function Debug:trace(...)
         return
     end
     self:print(Debug.TRACE, "|cffffd700", unpack(arg))
-end
-
--- API Hooks
-local _CreateFrame = CreateFrame
-CreateFrame = function(...)
-    Frame = _CreateFrame(unpack(arg))
-    function Frame:Texture(texture, width, height, opts)
-        Debug:log(texture, width, height, opts)
-        for func, args in pairs(opts) do
-            Debug:log("function call", func, unpack(args))
-        end
-    end
-
-    return Frame
-end
-
--- Addon lib
-function Addon:new(object)
-    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper(self.name), UIParent)
-    Debug:log("Frame: ", self.Frame)
-    self.object = object
-    for function_name in self.object do
-        if function_name ~= "new" and type(self.object[function_name]) == "function" then
-            Debug:trace("Mapping ", self.name .. ":" .. function_name, "to: ", self.object[function_name])
-            self.object_map[function_name] = self.object[function_name]
-
-            Debug:trace("Mapping ", id(self.object[function_name]), " to: ", self.name .. ":" .. function_name .. "")
-            self.object_map_reversed[id(self.object[function_name])] = self.object[function_name]
-
-            self.object_map_lookup[id(self.object[function_name])] = function_name
-        end
-    end
 end
 
 -- API Hooks
