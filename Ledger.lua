@@ -96,6 +96,7 @@ local main = function ()
 
 end
 
+
 -- API Hooks
 local _CreateFrame = CreateFrame
 CreateFrame = function(...)
@@ -292,6 +293,7 @@ loader = (function ()
         self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
     end
 end)()
+
 
 main()
 
