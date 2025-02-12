@@ -20,7 +20,7 @@ end
 
 local string = setmetatable(string, {})
 function string.unpack(_)
-    if not table.getn(_) then
+    if type(_) ~= "table" or not table.getn(_) then
         return
     end
     args = {}
@@ -125,7 +125,8 @@ function Loader:new(object)
         object_index = {},
         object_map = {},
         object_map_reversed = {},
-        object_map_lookup = {}
+        object_map_lookup = {},
+        hooks = {},
     }
     setmetatable(instance, Loader)
     Debug:trace(Loader, "new")
@@ -163,6 +164,26 @@ function Loader:callback(callback, ...)
     Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
     return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
+end
+function Loader:hook(func, callback)
+    Debug:trace(self, "hook: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+
+    if not _G[func] then
+        Debug:trace(self, "ERROR: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+        return
+    end
+
+    self.hooks[func] = _G[func]
+    _G[func] = function(...)
+        args = {}
+        args[1] = func
+        for idx in ipairs(arg) do
+            args[idx+1] = arg
+        end
+        Debug:trace(self, "args: ", string.unpack(args))
+        self:callback(callback, unpack(args))
+        return self.hooks[func](unpack(arg))
+    end
 end
 function Loader:dispatch(e)
     local func = nil
@@ -220,7 +241,7 @@ Money = {
     name = "Money",
     DEBUG_LEVEL = "TRACE",
     DEBUG = true,
-
+    money = 0,
 }
 function Money:new()
     Money.__index = Money
@@ -231,76 +252,94 @@ function Money:new()
 end
 
 function Money:enable(Frame)
-    print(self, "Enable. Frame:", Frame)
+    self.money = GetMoney()
+    print(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
 end
 
-
-Loader = Loader:new()
-ledger = Ledger:new()
-Loader:init(ledger)
-Loader:on("ADDON_LOADED", ledger.load)
-Loader:on("PLAYER_LOGIN", ledger.enable)
-Loader:on("PLAYER_LOGOUT", ledger.disable)
-Loader:listen()
-
-
-Loader2 = Loader:new()
-money = Money:new()
-Loader2:init(money)
-Loader2:on("PLAYER_LOGIN", money.enable)
-Loader2:listen()
-
-
-
-
-
-
-
-
-
-
-
-
--- @TODO
-
--- Table to store original functions
-local hookedFunctions = {}
-
--- Function to hook a Blizzard function dynamically
-local function hookFunction(funcName, callback)
-    if _G[funcName] then
-        hookedFunctions[funcName] = _G[funcName]
-        _G[funcName] = function(...)
-            callback(funcName, unpack(arg))
-            return hookedFunctions[funcName](unpack(arg))
-        end
-    end
-end
-
--- Function to detect changes in player gold
-local lastGold = GetMoney()
-local function checkGoldChange(reason)
-    local newGold = GetMoney()
-    local difference = newGold - lastGold
+function Money:track(Frame, ...)
+    Debug:trace(self, "args: ", string.unpack(arg))
+    local money = GetMoney()
+    local difference = money - self.money
     if difference ~= 0 then
         local action = (difference > 0) and "Gained" or "Lost"
-        DEFAULT_CHAT_FRAME:AddMessage("[GOLD TRACKER] " .. action .. " " .. math.abs(difference) .. " copper (" .. reason .. ")")
+        print(self, "track ", action, " ", math.abs(difference), " copper")
     end
-    lastGold = newGold
+    self.money = money
 end
 
--- Hook functions that involve gold transactions
-hookFunction("RepairAllItems", function() checkGoldChange("Repairs") end)
-hookFunction("UseContainerItem", function() checkGoldChange("Selling Item") end)
-hookFunction("PickupMerchantItem", function() checkGoldChange("Buying from Vendor") end)
-hookFunction("SendMail", function() checkGoldChange("Mail Sent") end)
-hookFunction("PlaceAuctionBid", function() checkGoldChange("Auction House Bid") end)
-hookFunction("PickupPlayerMoney", function() checkGoldChange("Trade") end)
+loader = Loader:new()
+ledger = Ledger:new()
+loader:init(ledger)
+loader:on("ADDON_LOADED", ledger.load)
+loader:on("PLAYER_LOGIN", ledger.enable)
+loader:on("PLAYER_LOGOUT", ledger.disable)
+loader:listen()
 
--- Monitor loot gold gain through events
-local frame = CreateFrame("Frame")
-frame:RegisterEvent("PLAYER_MONEY")
-frame:SetScript("OnEvent", function() checkGoldChange("Loot / Trade") end)
+
+loader2 = Loader:new()
+money = Money:new()
+loader2:init(money)
+loader2:on("PLAYER_LOGIN", money.enable)
+loader2:on("PLAYER_MONEY", money.track)
+loader2:hook("RepairAllItems", money.track)
+loader2:hook("UseContainerItem", money.track)
+loader2:hook("PickupMerchantItem", money.track)
+loader2:hook("SendMail", money.track)
+loader2:hook("PlaceAuctionBid", money.track)
+loader2:hook("PickupPlayerMoney", money.track)
+loader2:listen()
+
+
+
+
+
+
+
+
+
+
+
+
+-- -- @TODO
+
+-- -- Table to store original functions
+-- local hookedFunctions = {}
+
+-- -- Function to hook a Blizzard function dynamically
+-- local function hookFunction(funcName, callback)
+--     if _G[funcName] then
+--         hookedFunctions[funcName] = _G[funcName]
+--         _G[funcName] = function(...)
+--             callback(funcName, unpack(arg))
+--             return hookedFunctions[funcName](unpack(arg))
+--         end
+--     end
+-- end
+
+-- -- Function to detect changes in player gold
+-- local lastGold = GetMoney()
+-- local function checkGoldChange(reason)
+--     local newGold = GetMoney()
+--     local difference = newGold - lastGold
+--     if difference ~= 0 then
+--         local action = (difference > 0) and "Gained" or "Lost"
+--         DEFAULT_CHAT_FRAME:AddMessage("[GOLD TRACKER] " .. action .. " " .. math.abs(difference) .. " copper (" .. reason .. ")")
+--     end
+--     lastGold = newGold
+-- end
+
+-- -- Hook functions that involve gold transactions
+-- hookFunction("RepairAllItems", function() checkGoldChange("Repairs") end)
+-- hookFunction("UseContainerItem", function() checkGoldChange("Selling Item") end)
+-- hookFunction("PickupMerchantItem", function() checkGoldChange("Buying from Vendor") end)
+-- hookFunction("SendMail", function() checkGoldChange("Mail Sent") end)
+-- hookFunction("PlaceAuctionBid", function() checkGoldChange("Auction House Bid") end)
+-- hookFunction("PickupPlayerMoney", function() checkGoldChange("Trade") end)
+
+-- -- Monitor loot gold gain through events
+-- local frame = CreateFrame("Frame")
+-- frame:RegisterEvent("PLAYER_MONEY")
+-- frame:SetScript("OnEvent", function() checkGoldChange("Loot / Trade") end)
 
 
 
