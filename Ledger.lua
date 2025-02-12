@@ -1,10 +1,6 @@
 -- Isolate this file.
 local _G = getfenv(0)
-_G = setmetatable({
-    _G = _G
-}, {
-    __index = _G
-})
+_G = setmetatable({_G = _G}, {__index = _G})
 setfenv(1, _G)
 
 local main = (function ()
