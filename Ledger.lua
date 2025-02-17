@@ -291,7 +291,7 @@ Dispatcher = {
     LOG_LEVEL="TRACE",
     LOG_COLOR="7DF9FF",
 }
-function Dispatcher:new(object)
+function Dispatcher:new()
     Dispatcher.__index = Dispatcher
 
     local instance = {    
@@ -327,6 +327,7 @@ function Dispatcher:init(object)
     self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
     self.object_index = getmetatable(object).__index
     self.object = object
+    self.name = object.name .. "Dispatcher"
     
     Debug:trace(self, "init ", self.object.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
     self:map()
