@@ -3,8 +3,10 @@ local _G = getfenv(0)
 _G = setmetatable({_G = _G}, {__index = _G})
 setfenv(1, _G)
 
+-- Own code
+local Debug, Loader
+
 local main = function ()
-    -- Own code
     Ledger = {
         name = "Ledger",
         DEBUG_LEVEL = "TRACE",
@@ -22,13 +24,7 @@ local main = function ()
     function Ledger:load(Frame)
         print(self, "load Frame: ", Frame)
 
-        Frame = self:Panel(Frame)
-        -- local Icon        = Frame:Texture("BACKGROUND", 58, 58, [[Interface\Spellbook\Spellbook-Icon]]).SetPoint("TOPLEFT", Frame, "TOPLEFT", 10, -8)
-        -- local TopLeft     = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopLeft]]).SetPoint("TOPLEFT", Frame, "TOPLEFT",0, 0)
-        -- local TopRight    = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-TopRight]]).SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
-        -- local BottomLeft  = Frame:Texture("ARTWORK", 256, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotLeft]]).SetPoint("BOTTOMLEFT", Frame, "BOTTOMRLEFT", 0, 0)
-        -- local BottomRight = Frame:Texture("ARTWORK", 128, 256, [[Interface\Spellbook\UI-SpellbookPanel-BotRight]]).SetPoint("BOTTOMRIGHT", Frame, "BOTTOMRIGHT", 0, 0)
-
+        self:UI(Frame)
     end
 
     function Ledger:enable(Frame)
@@ -96,513 +92,503 @@ local main = function ()
 
 end
 
+-- Lua fixes
+function id(_)
+    return string.sub(tostring(_), -8)
+end
+function len(_)
+    if type(_) == "table" and _["n"] then
+        return table.getn(_)
+    end
+end
+
+function string.unpack(_)
+    if type(_) ~= "table" or not table.getn(_) then
+        return
+    end
+    args = {}
+    for idx, value in ipairs(_) do
+        args[idx] = value .. " "
+    end  
+    return unpack(args)
+end    
+
+function table.prepend(source, target)
+    -- copy of target
+    local copy = {}
+
+    for idx = 1,table.getn(source) do
+        if idx ~= "n" then
+            copy[idx] = source[idx]
+        end
+    end
+
+    for idx = 1,table.getn(target) do
+        if idx ~= "n" then
+            copy[idx+table.getn(source)] = target[idx]
+        end
+    end
+    table.setn(copy, table.getn(source) + table.getn(target))
+
+    return copy
+end
+
+-- WoW print.
+function print(_, ...)
+    local msg = ""
+    local args = arg
+
+    if type(_) == "table" then
+        if _.name then
+            msg = _.name .. ": "
+        else
+            msg = id(_)
+        end
+    elseif type(_) == "string" then
+        args = table.prepend({_}, args)
+    end
+
+    for idx = 1,table.getn(args) do
+        if idx ~= "n" then
+            value = args[idx]
+        
+            if not value then
+                msg = msg .. "nil"
+            elseif type(value) == "table" or type(value) == "function" then
+                msg = msg .. id(value)
+            elseif type(value) == "boolean" or type(value) == "number" then
+                msg = msg .. tostring(value)
+            else
+                msg = msg .. value
+            end
+        end
+    end
+
+    DEFAULT_CHAT_FRAME:AddMessage(msg);
+end
 
 -- API Hooks
 local _CreateFrame = CreateFrame
 CreateFrame = function(...)
-    Frame = _CreateFrame(unpack(arg))
-    function Frame:Texture(type, width, height, texture, opts)
-        Debug:log(type, " ", texture, " ", width, " ",  height, " ",  opts)
-        for func, args in pairs(opts) do
-            Debug:log("function call: ", func, " ", string.unpack(args))
+    local Frame = _CreateFrame(unpack(arg))
+
+    function Frame:CreateFrame(type, name, parent, ...)
+        local parent
+        if not parent then
+            parent = self
         end
+        return CreateFrame(type, name, parent, unpack(arg))
+    end
+
+    function Frame:Texture(name, type, width, height, texture, ...)
+        local Texture = self:CreateTexture(name, type)
+        Texture:SetTexture(texture)
+        if width then
+            Texture:SetWidth(width)
+        end
+        if height then
+            Texture:SetHeight(height)
+        end
+        return Texture
+    end
+
+    function Frame:SetSize(width, height)
+        if width then
+            self:SetWidth(width)
+        end
+        if height then
+            self:SetHeight(height)
+        end
+    end
+
+    function Frame:Debug()
+        Frame:SetBackdrop({
+            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",  -- Optional, background texture
+            edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",  -- Optional, border texture
+            tile = true, tileSize = 16, edgeSize = 16,
+            insets = { left = 5, right = 5, top = 5, bottom = 5 }
+        })
+        Frame:SetBackdropColor(0, 0, 1, 0.5)  -- Set background to blue with some transparency
+        Frame:SetBackdropBorderColor(1, 0, 0, 1)  -- Set border to red
+    end
+
+
+    function Frame:Dropdown(label, width, data)
+            -- Initialize the dropdown menu
+        local function Initialize()
+    
+            for i, val in ipairs(data) do
+                local info = {
+                    text = val,
+                    value = i,
+                    arg1 = i
+                }
+                info.func = function(value)
+                    UIDropDownMenu_SetText(data[value], Frame)
+                end
+                UIDropDownMenu_AddButton(info)
+            end
+        end
+    
+        UIDropDownMenu_Initialize(self, Initialize)
+        UIDropDownMenu_SetWidth(width, self)
+        UIDropDownMenu_SetText(label, self)
+    
+        return Frame
     end
 
     return Frame
 end
 
-utils = (function ()
-    function id(_)
-        return string.sub(tostring(_), -8)
-    end
-    function len(_)
-        if type(_) == "table" and _["n"] then
-            return table.getn(_)
-        end
-    end
-
-    string = setmetatable(string, {})
-    function string.unpack(_)
-        if type(_) ~= "table" or not table.getn(_) then
-            return
-        end
-        args = {}
-        for idx, value in ipairs(_) do
-            args[idx] = value .. " "
-        end  
-        return unpack(args)
-    end    
-
-    function print(_, ...)
-        local msg = ""
-
-        if type(_) == "table" then
-            if _.name then
-                msg = _.name .. ": "
-            else
-                msg = id(_)
-            end
-        elseif type(_) == "string" then
-            msg = _
-        end
-
-        for idx, value in ipairs(arg) do
-            if type(value) == "table" or type(value) == "function" then
-                msg = msg .. id(value)
-            elseif type(value) == "boolean" or type(value) == "number" then
-                msg = msg .. tostring(value)
-            elseif value == nil then
-                msg = msg .. "nil"
-            else
-                msg = msg .. value
-            end
-        end
-
-        DEFAULT_CHAT_FRAME:AddMessage(msg);
-    end
-end)()
-
-debug = (function () 
-    -- Debug
-    Debug = {
-        DEBUG_LEVEL="TRACE",
-        INFO="INFO",
-        TRACE="TRACE",
-    }
-    function Debug:print(_, level, color, ...)
-        if type(_) == "table" and not _.DEBUG then
-            return
-        end
-
-        local msg = ""
-        if type(_) == "string" then
-            msg = _
-        end
-        
-        if type(_) == "table" and _.name then 
-            msg =  color .. "[".. level .."] ".. _.name .."[" .. id(_) .."]:"
-        end
-        print(msg, unpack(arg))
-
-    end
-    function Debug:log(caller, ...)
-        self:print(caller, Debug.INFO, "|cffffd700", unpack(arg))
-    end
-    function Debug:trace(caller, ...)
-        if not caller or caller.DEBUG_LEVEL ~= self.TRACE then
-            return
-        end
-        self:print(caller, Debug.TRACE, "|cffffd700", unpack(arg))
-    end
-end)()
-
-loader = (function ()
-    -- Loader lib
-    Loader = {
-        name = "Loader",
-        DEBUG = true,
-        DEBUG_LEVEL="TRACE",
-    }
-    function Loader:new(object)
-        Loader.__index = Loader
-
-        local instance = {    
-            name = self.name,
-            Frame = {},
-            events = {},
-            object = {},
-            object_index = {},
-            object_map = {},
-            object_map_reversed = {},
-            object_map_lookup = {},
-            hooks = {},
-        }
-        setmetatable(instance, Loader)
-        Debug:trace(Loader, "new")
-        return instance
-    end
-    function Loader:map()
-        for function_name,func in pairs(self.object_index) do
-            if function_name ~= "new" and type(func) == "function" then
-                local callback = self.object_index[function_name]
-                Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", self.object.name, ".", function_name, " = ", callback)
-                self.object_map[function_name] = callback
-
-                Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", id(callback), " = ", self.object.name, ".", function_name)
-                self.object_map_reversed[id(callback)] = callback
-
-                self.object_map_lookup[id(callback)] = function_name
-            end
-        end
-    end
-    function Loader:init(object)
-        self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
-        self.object_index = getmetatable(object).__index
-        self.object = object
-        
-        Debug:trace(self, "init ", self.object.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
-        self:map()
+-- Debug
+Debug = {
+    DEBUG_LEVEL="TRACE",
+    INFO="INFO",
+    TRACE="TRACE",
+}
+function Debug:print(_, level, color, ...)
+    if type(_) == "table" and not _.DEBUG then
+        return
     end
 
-    function Loader:on(event, callback)
-        Debug:trace(self, "on ", self.object.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
-        self.Frame:RegisterEvent(event)
-        self.events[event] = callback
+    local msg = ""
+    if type(_) == "string" then
+        msg = _
     end
-    function Loader:callback(callback, ...)
-        Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
-
-        return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
+    
+    if type(_) == "table" and _.name then 
+        msg =  color .. "[".. level .."] ".. _.name .."[" .. id(_) .."]:"
     end
-    function Loader:hook(func, callback)
-        Debug:trace(self, "hook: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+    print(msg, unpack(arg))
 
-        if not _G[func] then
-            Debug:trace(self, "ERROR: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
-            return
-        end
-
-        self.hooks[func] = _G[func]
-        _G[func] = function(...)
-            args = {}
-            args[1] = func
-            for idx in ipairs(arg) do
-                args[idx+1] = arg
-            end
-            Debug:trace(self, "args: ", string.unpack(args))
-            self:callback(callback, unpack(args))
-            return self.hooks[func](unpack(arg))
-        end
+end
+function Debug:log(caller, ...)
+    self:print(caller, Debug.INFO, "|cffffd700", unpack(arg))
+end
+function Debug:trace(caller, ...)
+    if not caller or caller.DEBUG_LEVEL ~= self.TRACE then
+        return
     end
-    function Loader:dispatch(e)
-        local func = nil
-        if e == "ADDON_LOADED" and arg1 == self.object.name then
-            func = self.object["load"]
-        elseif e ~= "ADDON_LOADED" then
-            func = self.events[e]
-        else
-            return
-        end
-
-        Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
-        self:callback(func)
-    end
-    function Loader:listen()
-        Debug:trace(self, "listen ", self.object.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
-
-        self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
-    end
-end)()
-
-
-main()
-
--- @todo Scrollbar
--- @todo Fill with text
--- @todo Layout 
-function Ledger:Panel(Frame)
-    local LedgerFrame = CreateFrame("Frame", "FRAME_LEDGER_PANEL", Frame)
-    LedgerFrame:SetWidth(384)
-    LedgerFrame:SetHeight(512)
-    LedgerFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
-
-    LedgerFrame:EnableMouse(true)
-    LedgerFrame:SetMovable(true)
-    LedgerFrame:SetUserPlaced(true)
-
-    LedgerFrame:RegisterForDrag("LeftButton")
-    LedgerFrame:SetScript("OnDragStart", function()
-        LedgerFrame:StartMoving()
-    end)
-    LedgerFrame:SetScript("OnDragStop", function()
-        LedgerFrame:StopMovingOrSizing()
-    end)
-
-    local CloseButton = CreateFrame("Button", "FRAME_LEDGER_PANEL_BUTTON_CLOSE", LedgerFrame, "UIPanelCloseButton")
-    CloseButton:SetPoint("CENTER", LedgerFrame, "TOPRIGHT", -44, -25)
-    CloseButton:SetScript("OnClick", function()
-        LedgerFrame:Hide()
-    end)
-
-    local Icon = LedgerFrame:CreateTexture(nil, "BACKGROUND")
-    Icon:SetTexture([[Interface\Spellbook\Spellbook-Icon]])
-    Icon:SetWidth(58)
-    Icon:SetHeight(58)
-    Icon:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 10, -8)
-
-    local TopLeft = LedgerFrame:CreateTexture(nil, "ARTWORK")
-    TopLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopLeft]])
-    TopLeft:SetWidth(256)
-    TopLeft:SetHeight(256)
-    TopLeft:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 0, 0)
-
-    local TopRight = LedgerFrame:CreateTexture(nil, "ARTWORK")
-    TopRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-TopRight]])
-    TopRight:SetWidth(128)
-    TopRight:SetHeight(256)
-    TopRight:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", 0, 0)
-
-    local BottomLeft = LedgerFrame:CreateTexture(nil, "ARTWORK")
-    BottomLeft:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotLeft]])
-    BottomLeft:SetWidth(256)
-    BottomLeft:SetHeight(256)
-    BottomLeft:SetPoint("BOTTOMLEFT", LedgerFrame, "BOTTOMLEFT", 0, 0)
-
-    local BottomRight = LedgerFrame:CreateTexture(nil, "ARTWORK")
-    BottomRight:SetTexture([[Interface\Spellbook\UI-SpellbookPanel-BotRight]])
-    BottomRight:SetWidth(128)
-    BottomRight:SetHeight(256)
-    BottomRight:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", 0, 0)
-
-    local TitleText = LedgerFrame:CreateFontString("FRAME_LEDGER_PANEL_TITLE_TEXT", "ARTWORK", "GameFontNormal")
-    TitleText:SetPoint("CENTER", LedgerFrame, "CENTER", 6, 230)
-    TitleText:SetText("Ledger")
-
-    local PageText = LedgerFrame:CreateFontString("FRAME_LEDGER_PANEL_PAGE_TEXT", "ARTWORK", "GameFontNormal")
-    PageText:SetWidth(102)
-    PageText:SetPoint("BOTTOM", LedgerFrame, "BOTTOM", -14, 96)
-    PageText:SetText("Page 1")
-
-    local Page = {
-        currentPage = 1,
-        pages = {{"Page 1 Line 1", "Page 1 Line 2", "Page 1 Line 3"},
-                 {"Page 2 Line 1", "Page 2 Line 2", "Page 2 Line 3"},
-                 {"Page 3 Line 1", "Page 3 Line 2", "Page 3 Line 3"}}
-    }
-
-    local PrevButton = CreateFrame("Button", "FRAME_LEDGER_PREV_BUTTON", LedgerFrame, "UIPanelButtonTemplate")
-    PrevButton:SetPoint("BOTTOM", LedgerFrame, "BOTTOMLEFT", 50, 85)
-    PrevButton:SetWidth(32)
-    PrevButton:SetHeight(32)
-
-    local normTex = PrevButton:CreateTexture(nil, "BACKGROUND")
-    normTex:SetAllPoints()
-    normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
-    PrevButton:SetNormalTexture(normTex)
-
-    local pushTex = PrevButton:CreateTexture(nil, "BACKGROUND")
-    pushTex:SetAllPoints()
-    pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
-    PrevButton:SetPushedTexture(pushTex)
-
-    local disableTex = PrevButton:CreateTexture(nil, "BACKGROUND")
-    disableTex:SetAllPoints()
-    disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Disabled]])
-    PrevButton:SetDisabledTexture(disableTex)
-
-    PrevButton:SetScript("OnClick", function()
-        PlaySound("igAbiliityPageTurn")
-        Page:SetPage(Page.currentPage - 1)
-    end)
-
-    local NextButton = CreateFrame("Button", "FRAME_LEDGER_NEXT_BUTTON", LedgerFrame, "UIPanelButtonTemplate")
-    NextButton:SetPoint("BOTTOM", LedgerFrame, "BOTTOMRIGHT", -70, 85)
-    NextButton:SetWidth(32)
-    NextButton:SetHeight(32)
-
-    local normTex = NextButton:CreateTexture(nil, "BACKGROUND")
-    normTex:SetAllPoints()
-    normTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
-    NextButton:SetNormalTexture(normTex)
-
-    local pushTex = NextButton:CreateTexture(nil, "BACKGROUND")
-    pushTex:SetAllPoints()
-    pushTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
-    NextButton:SetPushedTexture(pushTex)
-
-    local disableTex = NextButton:CreateTexture(nil, "BACKGROUND")
-    disableTex:SetAllPoints()
-    disableTex:SetTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Disabled]])
-    NextButton:SetDisabledTexture(disableTex)
-
-    NextButton:SetScript("OnClick", function()
-        PlaySound("igAbilityPageTurn")
-        Page:SetPage(Page.currentPage + 1)
-    end)
-
-    PrevButton:Disable()
-    Debug:log("pages: ", table.getn(Page.pages))
-    if table.getn(Page.pages) <= 1 then
-        NextButton:Enable()
-    end
-
-    function Page:SetPage(page)
-        self.currentPage = math.max(1, math.min(page, table.getn(self.pages)))
-        PageText:SetText("Page " .. self.currentPage)
-        self:UpdatePageContent()
-
-        -- Update button states
-        if self.currentPage > 1 then
-            PrevButton:Enable()
-        else
-            PrevButton:Disable()
-        end
-        if self.currentPage < table.getn(self.pages) then
-            NextButton:Enable()
-        else
-            NextButton:Disable()
-        end
-    end
-    function Page:UpdatePageContent()
-        local content = self.pages[self.currentPage] or {}
-        for i = 1, 3 do
-            _G["LedgerText" .. i]:SetText(content[i] or "")
-        end
-    end
-
-    local textY = -70
-    for i = 1, 3 do
-        local text = LedgerFrame:CreateFontString("LedgerText" .. i, "ARTWORK", "GameFontNormal")
-        text:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 30, textY)
-        text:SetWidth(324)
-        text:SetJustifyH("LEFT")
-        textY = textY - 30
-    end
-    Page:UpdatePageContent()
-    LedgerFrame:Show()
+    self:print(caller, Debug.TRACE, "|cffffd700", unpack(arg))
 end
 
 
+-- Loader lib
+Loader = {
+    name = "Loader",
+    DEBUG = true,
+    DEBUG_LEVEL="TRACE",
+}
+function Loader:new(object)
+    Loader.__index = Loader
 
--- -- Adjust text area dimensions and add scrollable content
--- local VISIBLE_LINES = 8
--- local LINE_HEIGHT = 16
--- local textYStart = -70
--- local textX = 30
+    local instance = {    
+        name = self.name,
+        Frame = {},
+        events = {},
+        object = {},
+        object_index = {},
+        object_map = {},
+        object_map_reversed = {},
+        object_map_lookup = {},
+        hooks = {},
+    }
+    setmetatable(instance, Loader)
+    Debug:trace(Loader, "new")
+    return instance
+end
+function Loader:map()
+    for function_name,func in pairs(self.object_index) do
+        if function_name ~= "new" and type(func) == "function" then
+            local callback = self.object_index[function_name]
+            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", self.object.name, ".", function_name, " = ", callback)
+            self.object_map[function_name] = callback
 
--- -- Create scroll frame container
--- local ScrollFrame = CreateFrame("Frame", nil, LedgerFrame)
--- ScrollFrame:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", textX, textYStart)
--- ScrollFrame:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", -40, 100)
--- ScrollFrame:SetClipsChildren(true)
+            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", id(callback), " = ", self.object.name, ".", function_name)
+            self.object_map_reversed[id(callback)] = callback
 
--- -- Create text lines within scroll frame
--- local textLines = {}
--- for i = 1, 12 do  -- Create 12 lines (4 more than visible for buffer)
---     local text = ScrollFrame:CreateFontString("LedgerText"..i, "ARTWORK", "GameFontNormal")
---     text:SetPoint("TOPLEFT", ScrollFrame, "TOPLEFT", 0, -(i-1)*LINE_HEIGHT)
---     text:SetWidth(300)
---     text:SetJustifyH("LEFT")
---     textLines[i] = text
--- end
+            self.object_map_lookup[id(callback)] = function_name
+        end
+    end
+end
+function Loader:init(object)
+    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
+    self.object_index = getmetatable(object).__index
+    self.object = object
+    
+    Debug:trace(self, "init ", self.object.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
+    self:map()
+end
 
--- -- Scrollbar construction
--- local ScrollBar = CreateFrame("Frame", nil, LedgerFrame)
--- ScrollBar:SetWidth(24)
--- ScrollBar:SetPoint("TOPRIGHT", ScrollFrame, "TOPRIGHT", 12, 0)
--- ScrollBar:SetPoint("BOTTOMRIGHT", ScrollFrame, "BOTTOMRIGHT", 12, 0)
+function Loader:on(event, callback)
+    Debug:trace(self, "on ", self.object.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+    self.Frame:RegisterEvent(event)
+    self.events[event] = callback
+end
+function Loader:callback(callback, ...)
+    Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
--- -- Scroll track background
--- local Track = ScrollBar:CreateTexture(nil, "BACKGROUND")
--- Track:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar")
--- Track:SetTexCoord(0, 0.45, 0, 0.98)
--- Track:SetAllPoints()
+    return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
+end
+function Loader:hook(func, callback)
+    Debug:trace(self, "hook: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
--- -- Thumb texture
--- local Thumb = ScrollBar:CreateTexture(nil, "ARTWORK")
--- Thumb:SetTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button")
--- Thumb:SetWidth(24)
--- Thumb:SetHeight(24)
+    if not _G[func] then
+        Debug:trace(self, "ERROR: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+        return
+    end
 
--- -- Scroll buttons
--- local UpButton = CreateFrame("Button", nil, ScrollBar)
--- UpButton:SetWidth(24)
--- UpButton:SetHeight(24)
--- UpButton:SetPoint("TOP", ScrollBar, "TOP")
--- UpButton:SetNormalTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Up")
--- UpButton:SetPushedTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Down")
--- UpButton:SetDisabledTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Disabled")
+    self.hooks[func] = _G[func]
+    _G[func] = function(...)
+        args = {}
+        args[1] = func
+        for idx in ipairs(arg) do
+            args[idx+1] = arg
+        end
+        Debug:trace(self, "args: ", string.unpack(args))
+        self:callback(callback, unpack(args))
+        return self.hooks[func](unpack(arg))
+    end
+end
+function Loader:dispatch(e)
+    local func = nil
+    if e == "ADDON_LOADED" and arg1 == self.object.name then
+        func = self.object["load"]
+    elseif e ~= "ADDON_LOADED" then
+        func = self.events[e]
+    else
+        return
+    end
 
--- local DownButton = CreateFrame("Button", nil, ScrollBar)
--- DownButton:SetWidth(24)
--- DownButton:SetHeight(24)
--- DownButton:SetPoint("BOTTOM", ScrollBar, "BOTTOM")
--- DownButton:SetNormalTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Down")
--- DownButton:SetPushedTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Down")
--- DownButton:SetDisabledTexture("Interface\\PaperDollInfoFrame\\UI-Character-ScrollBar-Button-Disabled")
+    Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
+    self:callback(func)
+end
+function Loader:listen()
+    Debug:trace(self, "listen ", self.object.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
 
--- -- Scrollbar logic
--- local currentScroll = 0
--- local maxScroll = 0
--- local isDragging = false
+    self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
+end
 
--- local function UpdateScroll()
---     maxScroll = math.max(0, #Page.pages[Page.currentPage] - VISIBLE_LINES)
---     currentScroll = math.min(currentScroll, maxScroll)
+main()
 
---     -- Update thumb position
---     local ratio = maxScroll > 0 and currentScroll / maxScroll or 0
---     Thumb:SetPoint("CENTER", ScrollBar, "TOP", 0, -ratio * (ScrollBar:GetHeight() - Thumb:GetHeight()) - 12)
+-- UI
+function Ledger:UI(Frame)
+    local LedgerFrame
+    local Title, DragTitle, TitleDate, Icon, DragIcon, CloseButton
+    local BackgroundTL, BackgroundTR, BackgroundBL, BackgroundBR
+    local ScrollContainer, ScrollFrame, ScrollBar, ContentFrame
+    local PrevButton, NextButton
+    local DayDropdown, MonthDropdown
 
---     -- Update text positions
---     for i = 1, #textLines do
---         local lineIndex = i + currentScroll
---         if lineIndex <= #Page.pages[Page.currentPage] then
---             textLines[i]:SetText(Page.pages[Page.currentPage][lineIndex] or "")
---             textLines[i]:Show()
---         else
---             textLines[i]:Hide()
---         end
---     end
+    local day, month, year
+    local days = {1,2,3,4,6,7,9,10,11,15,20,21,22,25,26,27,28}
+    local monthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 
---     -- Update button states
---     UpButton:SetEnabled(currentScroll > 0)
---     DownButton:SetEnabled(currentScroll < maxScroll)
--- end
+    LedgerFrame = CreateFrame("Frame", "LedgerFrame", UIParent)
+    LedgerFrame:SetWidth(384)
+    LedgerFrame:SetHeight(512)
+    LedgerFrame:SetPoint("TOPRIGHT", UIParent, "TOPRIGHT", 0, 0)
+    LedgerFrame:SetMovable(true)
+    LedgerFrame:EnableMouse(true)
+    LedgerFrame:RegisterForDrag("LeftButton")
 
--- -- Scrollbar interaction
--- UpButton:SetScript("OnClick", function()
---     currentScroll = math.max(0, currentScroll - 1)
---     UpdateScroll()
---     PlaySound("igAbilityPageTurn")
--- end)
 
--- DownButton:SetScript("OnClick", function()
---     currentScroll = math.min(maxScroll, currentScroll + 1)
---     UpdateScroll()
---     PlaySound("igAbilityPageTurn")
--- end)
 
--- Thumb:SetScript("OnMouseDown", function()
---     isDragging = true
---     this:GetParent():SetScript("OnUpdate", function()
---         if isDragging then
---             local _, y = GetCursorPosition()
---             local scale = this:GetEffectiveScale()
---             y = y / scale
+    -- Function to update the day display or any other UI elements
+    function UpdateDateDisplay()
+        -- This function will update the date displayed on the UI
+        -- You can add code to recalculate the positions of day buttons or any other UI elements
+        print("Current Day: " .. day)
+    end
+    function PrevDay()
+        -- Decrease day by 1 (you may want to wrap around to previous month if needed)
+        day = day - 1
+        if day < 1 then
+            day = 31  -- Wrap around if going below 1
+        end
+        -- Update the displayed day (recalculate positions or other elements)
+        UpdateDateDisplay()
+    end
+    function NextDay()
+        -- Increase day by 1 (you may want to wrap around to next month if needed)
+        day = day + 1
+        if day > 31 then
+            day = 1  -- Wrap around if going above 31
+        end
+        -- Update the displayed day (recalculate positions or other elements)
+        UpdateDateDisplay()
+    end
+    local function AddLine(text)
+        local numLines = ContentFrame.numLines or 0
+        local yOffset = -numLines * 20  -- adjust vertical spacing as needed
 
---             local minY = this:GetTop() - ScrollBar:GetHeight() + Thumb:GetHeight()/2
---             local maxY = this:GetTop() - Thumb:GetHeight()/2
---             local ratio = (y - minY) / (maxY - minY)
+        local line = ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        line:SetPoint("TOPLEFT", ContentFrame, "TOPLEFT", 0, yOffset)
+        line:SetText(text)
 
---             currentScroll = math.floor(ratio * maxScroll + 0.5)
---             UpdateScroll()
---         end
---     end)
--- end)
+        ContentFrame.numLines = numLines + 1
+        local newHeight = ContentFrame.numLines * 20
 
--- Thumb:SetScript("OnMouseUp", function()
---     isDragging = false
---     this:GetParent():SetScript("OnUpdate", nil)
--- end)
+        ContentFrame:SetHeight(newHeight)
 
--- -- Modify the Page table and functions:
--- local Page = {
---     currentPage = 1,
---     pages = {
---         {"Line 1", "Line 2", "Line 3", "Line 4", "Line 5", "Line 6", "Line 7", "Line 8", "Line 9", "Line 10"},
---         {"Page 2 Line 1", "Page 2 Line 2", "Page 2 Line 3"},
---         {"Page 3 Content 1", "Page 3 Content 2", "Page 3 Content 3", "Page 3 Content 4"}
---     }
--- }
+        -- Fix the off-by-one error
+        local maxScroll = math.max(0, newHeight - ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
 
--- function Page:SetPage(page)
---     self.currentPage = math.max(1, math.min(page, table.getn(self.pages)))
---     PageText:SetText("Page "..self.currentPage)
---     currentScroll = 0  -- Reset scroll when changing pages
---     UpdateScroll()
+        -- Apply new scroll limits
+        ScrollBar:SetMinMaxValues(0, maxScroll)
 
---     -- Keep original button state logic
---     PrevButton:SetEnabled(self.currentPage > 1)
---     NextButton:SetEnabled(self.currentPage < table.getn(self.pages))
--- end
+        -- Hide scrollbar if not needed
+        if maxScroll <= 0 then
+            ScrollBar:Hide()
+            ScrollBar:SetValue(0)  -- Reset scroll position
+        else
+            ScrollBar:Show()
+        end
+    end
+    local function GetDaysInMonth(month)
+        local daysInMonth = {
+            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
+        }
+        return daysInMonth[month]
+    end
+
+
+    Title = LedgerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    Title:SetText("Ledger")
+    Title:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 80, -18)
+
+    TitleDate = LedgerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    TitleDate:SetText("Sunday 16/2")
+    TitleDate:SetPoint("TOP", LedgerFrame, "TOP", -0, -18)
+
+    DragTitle = LedgerFrame:CreateFrame("Frame")
+    DragTitle:SetSize(265, 28)
+    DragTitle:SetPoint("TOP", LedgerFrame, "TOP", 5, -10)
+    DragTitle:EnableMouse(true)
+    DragTitle:SetScript("OnMouseDown", function() LedgerFrame:StartMoving() end)
+    DragTitle:SetScript("OnMouseUp", function() LedgerFrame:StopMovingOrSizing() end)
+    DragTitle:Debug()
+
+    Icon = LedgerFrame:Texture('Icon', 'BACKGROUND', 58, 58, [[Interface\Spellbook\Spellbook-Icon]])
+    Icon:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 10, -8)
+
+    DragIcon = LedgerFrame:CreateFrame("Frame")
+    DragIcon:SetPoint("TOP", Icon, "TOP", 0, 0) 
+    DragIcon:SetSize(58, 58) 
+    DragIcon:EnableMouse(true)
+    DragIcon:SetScript("OnMouseDown", function() LedgerFrame:StartMoving() end)
+    DragIcon:SetScript("OnMouseUp", function() LedgerFrame:StopMovingOrSizing() end)
+    DragIcon:Debug()
+
+    BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
+    BackgroundTL:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 0, 0)
+    BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
+    BackgroundTR:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", 0, 0)
+    BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
+    BackgroundBL:SetPoint("BOTTOMLEFT", LedgerFrame, "BOTTOMLEFT", 0, 0)
+    BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
+    BackgroundBR:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", 0, 0)
+
+    CloseButton = LedgerFrame:CreateFrame("Button", nil, LedgerFrame, "UIPanelCloseButton")
+    CloseButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -30, -8)
+
+    PrevButton = LedgerFrame:CreateFrame("Button", "PrevDayButton")
+    PrevButton:SetSize(28, 28)
+    PrevButton:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 91, -40)
+    PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
+    PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
+    PrevButton:SetScript("OnClick", PrevDay)
+
+    NextButton = LedgerFrame:CreateFrame("Button", "NextDayButton")
+    NextButton:SetSize(28, 28)
+    NextButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -44, -40)
+    NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
+    NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
+    NextButton:SetScript("OnClick", NextDay)
+
+    -- Dropdown
+    DayDropdown = LedgerFrame:CreateFrame("Frame", "DayDropdown", LedgerFrame, "UIDropDownMenuTemplate")
+    DayDropdown:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 100, -40)
+    DayDropdown:Dropdown("Day", 60, days)
+
+    MonthDropdown = LedgerFrame:CreateFrame("Frame", "MonthDropdown", LedgerFrame, "UIDropDownMenuTemplate")
+    MonthDropdown:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 180, -40)
+    MonthDropdown:Dropdown("Month", 100, monthNames)
+
+
+
+    -- Scroll
+    ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
+    ScrollContainer:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 22, -80)
+    ScrollContainer:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", -65, 80)
+
+    ScrollFrame = ScrollContainer:CreateFrame("ScrollFrame", "LedgerScrollFrame")
+    ScrollFrame:SetAllPoints(ScrollContainer)
+    ScrollFrame:EnableMouseWheel(true)
+    ScrollFrame:SetHeight(0)
+    ScrollFrame:SetScript("OnMouseWheel", function()
+        local current = ScrollBar:GetValue()
+        local newVal = current - (arg1 * 20)  -- adjust the multiplier for scroll speed
+        if newVal < 0 then
+            newVal = 0
+        end
+        ScrollBar:SetValue(newVal)
+    end)
+
+    ScrollBar = ScrollContainer:CreateFrame("Slider", "LedgerScrollBar", ScrollContainer, "UIPanelScrollBarTemplate")
+    ScrollBar:SetPoint("TOPLEFT", ScrollContainer, "TOPRIGHT", 4, -11)
+    ScrollBar:SetPoint("BOTTOMLEFT", ScrollContainer, "BOTTOMRIGHT", 4, 19)
+    ScrollBar:SetMinMaxValues(1, 200)
+    ScrollBar:SetValueStep(1)
+    ScrollBar:SetWidth(16)
+    ScrollBar:SetScript("OnValueChanged", function()
+        ScrollFrame:SetVerticalScroll(arg1)
+    end)
+
+    ContentFrame = ScrollFrame:CreateFrame("Frame", "LedgerContentFrame")
+    ContentFrame:SetWidth(354)
+    ContentFrame:SetHeight(0)  -- initial height; expands as lines are added.
+    ContentFrame:SetPoint("TOPLEFT", ScrollFrame, "TOPRIGHT", 6, -22)
+    ContentFrame:SetPoint("BOTTOMLEFT", ScrollFrame, "BOTTOMRIGHT", 4, 20)
+    ScrollFrame:SetScrollChild(ContentFrame)
+    ScrollBar:SetValue(0)
+
+    AddLine([[Mail "Test" from Kabinner +30c]])
+    AddLine([[Mail "Test" from Kabinner +1s]])
+    AddLine([[Mail "Test" from Kabinner +50c]])
+    AddLine([[Mail "Test" to Kabgilder -30c]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Foo Entry]])
+    AddLine([[Last Entry]])
+    return LedgerFrame
+end
