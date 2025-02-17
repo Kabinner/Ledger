@@ -1,6 +1,6 @@
 ```lua
-local Ledger, Money
-local Debug, Dispatcher
+local Debug
+local Dispatcher, Ledger, Money
 
 local main = function ()
     Ledger = {
