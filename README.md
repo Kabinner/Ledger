@@ -1,4 +1,3 @@
-```lua
 local Debug
 local Dispatcher, Ledger, Money
 
@@ -11,11 +10,15 @@ local main = function ()
         day = 1,
     }
 
-    function Ledger:new()
+    function Ledger:new(dispatcher)
         Ledger.__index = Ledger
-        local instance = {}
+        local instance = {
+            name = self.name,
+            event = dispatcher,
+            day = self.day
+        }
         setmetatable(instance, Ledger)
-        Debug:trace(Ledger, "new")
+        Debug:trace(Ledger, "new: ", instance, " Dispatcher", dispatcher)
         return instance
     end
 
@@ -36,23 +39,24 @@ local main = function ()
     function Ledger:disable()
     end
 
-    function Ledger:UpdateDateDisplay()
-        print("Current Day: " .. day)
+    function Ledger:UpdateDateDisplay(Frame)
+        Debug:trace(self, " Ledger:UpdateDateDisplay: ", "Current Day: ", self.day)
     end
-    function Ledger:PrevDay()
+    function Ledger:PrevDay(Frame)
+        Debug:trace(self, "Ledger:PrevDay: day:", self.day)
         self.day = self.day - 1
         if self.day < 1 then
-            day = 31  -- Wrap around if going below 1
+            self.day = 31  -- Wrap around if going below 1
         end
-
-        self:UpdateDateDisplay()
+        self.event:dispatch("DISPLAY_UPDATE_DAY")
     end
-    function Ledger:NextDay()
+    function Ledger:NextDay(Frame)
+        Debug:trace(self, "Ledger:NextDay: day:", self.day)
         self.day = self.day + 1
         if self.day > 31 then
             self.day = 1  -- Wrap around if going above 31
         end
-        self:UpdateDateDisplay()
+        self.event:dispatch("DISPLAY_UPDATE_DAY")
     end
 
     Money = {
@@ -64,7 +68,9 @@ local main = function ()
     }
     function Money:new()
         Money.__index = Money
-        local instance = {}
+        local instance = {
+            money = self.money
+        }
         setmetatable(instance, Money)
         Debug:trace(Money, "new")
         return instance
@@ -87,11 +93,15 @@ local main = function ()
     end
 
     loader = Dispatcher:new()
-    ledger = Ledger:new()
+    ledger = Ledger:new(loader)
     loader:init(ledger)
     loader:on("ADDON_LOADED", ledger.load)
     loader:on("PLAYER_LOGIN", ledger.enable)
     loader:on("PLAYER_LOGOUT", ledger.disable)
+    loader:on("DISPLAY_UPDATE_DAY", ledger.UpdateDateDisplay)
+    loader:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
+    loader:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
+    
     loader:listen()
 
 
@@ -109,6 +119,7 @@ local main = function ()
     loader2:listen()
 
 end
+
 main()
 -- UI
 function Ledger:UI(Frame)
