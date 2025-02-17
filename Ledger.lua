@@ -175,7 +175,7 @@ function print(_, ...)
     DEFAULT_CHAT_FRAME:AddMessage(msg);
 end
 -- @todo Add '/r' for developing
-SLASH_DEV1 = "/ledger"
+SLASH_DEV1 = "/r"
 SlashCmdList["DEV"] = function(msg)
     Debug:log(self, "reload command.")
 end
