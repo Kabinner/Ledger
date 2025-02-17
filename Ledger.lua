@@ -10,8 +10,9 @@ local Debug, Loader
 local main = function ()
     Ledger = {
         name = "Ledger",
-        DEBUG_LEVEL = "TRACE",
         DEBUG = true,
+        LOG_LEVEL = "TRACE",
+        LOG_COLOR = "",
     }
 
     function Ledger:new()
@@ -41,9 +42,10 @@ local main = function ()
 
     Money = {
         name = "Money",
-        DEBUG_LEVEL = "TRACE",
-        DEBUG = true,
         money = 0,
+        DEBUG = true,
+        LOG_LEVEL = "TRACE",
+        LOG_COLOR = "39FF14",
     }
     function Money:new()
         Money.__index = Money
@@ -243,7 +245,6 @@ end
 
 -- Debug
 Debug = {
-    DEBUG_LEVEL="TRACE",
     INFO="INFO",
     TRACE="TRACE",
 }
@@ -264,13 +265,22 @@ function Debug:print(_, level, color, ...)
 
 end
 function Debug:log(caller, ...)
-    self:print(caller, Debug.INFO, "|cffffd700", unpack(arg))
+    color = "|cffffd700"
+    if caller.LOG_COLOR and caller.LOG_COLOR ~= "" then
+        color = "|cff" .. caller.LOG_COLOR
+    end
+
+    self:print(caller, Debug.INFO, color, unpack(arg))
 end
 function Debug:trace(caller, ...)
-    if not caller or caller.DEBUG_LEVEL ~= self.TRACE then
+    if not caller or caller.LOG_LEVEL ~= self.TRACE then
         return
     end
-    self:print(caller, Debug.TRACE, "|cffffd700", unpack(arg))
+    color = "|cffffd700"
+    if caller.LOG_COLOR and caller.LOG_COLOR ~= "" then
+        color = "|cff" .. caller.LOG_COLOR
+    end
+    self:print(caller, Debug.TRACE, color, unpack(arg))
 end
 
 
@@ -278,7 +288,8 @@ end
 Loader = {
     name = "Loader",
     DEBUG = true,
-    DEBUG_LEVEL="TRACE",
+    LOG_LEVEL="TRACE",
+    LOG_COLOR="7DF9FF",
 }
 function Loader:new(object)
     Loader.__index = Loader
