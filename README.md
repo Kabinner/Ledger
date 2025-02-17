@@ -1,5 +1,5 @@
 
-<img style="position: center" src="https://github.com/user-attachments/assets/d3852943-d71e-4c3c-83c6-9fa6d261d178" width="50%" height="50%">
+<img style="align: center" src="https://github.com/user-attachments/assets/d3852943-d71e-4c3c-83c6-9fa6d261d178" width="50%" height="50%">
 
 ```lua
 local Debug
