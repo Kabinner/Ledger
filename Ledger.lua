@@ -105,13 +105,16 @@ function len(_)
     end
 end
 
-function string.unpack(_)
+function string.unpack(_, sep)
     if type(_) ~= "table" or not table.getn(_) then
         return
     end
     args = {}
+    if not sep then
+        sep = " "
+    end
     for idx, value in ipairs(_) do
-        args[idx] = value .. " "
+        args[idx] = value .. sep
     end  
     return unpack(args)
 end    
