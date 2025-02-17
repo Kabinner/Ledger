@@ -4,8 +4,8 @@ _G = setmetatable({_G = _G}, {__index = _G})
 setfenv(1, _G)
 
 -- Own code
-local Ledger, Money
-local Debug, Dispatcher
+local Debug
+local Dispatcher, Ledger, Money
 
 local main = function ()
     Ledger = {
