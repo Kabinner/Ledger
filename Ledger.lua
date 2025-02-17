@@ -24,7 +24,7 @@ local main = function ()
             day = self.day
         }
         setmetatable(instance, Ledger)
-        Debug:trace(Ledger, "new: ", instance, " Dispatcher", dispatcher)
+        Debug:trace(Ledger, "new: ", instance, " Dispatcher: ", instance.event)
         return instance
     end
 
@@ -46,10 +46,10 @@ local main = function ()
     end
 
     function Ledger:UpdateDateDisplay(Frame)
-        Debug:trace(self, " Ledger:UpdateDateDisplay: ", "Current Day: ", self.day)
+        Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
     end
     function Ledger:PrevDay(Frame)
-        Debug:trace(self, "Ledger:PrevDay: day:", self.day)
+        Debug:trace(self, "PrevDay: day:", self.day)
         self.day = self.day - 1
         if self.day < 1 then
             self.day = 31  -- Wrap around if going below 1
@@ -57,7 +57,7 @@ local main = function ()
         self.event:dispatch("DISPLAY_UPDATE_DAY")
     end
     function Ledger:NextDay(Frame)
-        Debug:trace(self, "Ledger:NextDay: day:", self.day)
+        Debug:trace(self, "NextDay: day:", self.day)
         self.day = self.day + 1
         if self.day > 31 then
             self.day = 1  -- Wrap around if going above 31
@@ -189,7 +189,7 @@ function print(_, ...)
         if idx ~= "n" then
             value = args[idx]
         
-            if not value then
+            if type(value) == "nil" then
                 msg = msg .. "nil"
             elseif type(value) == "table" or type(value) == "function" then
                 msg = msg .. id(value)
@@ -204,10 +204,10 @@ function print(_, ...)
     DEFAULT_CHAT_FRAME:AddMessage(msg);
 end
 -- @todo Add '/r' for developing
-SLASH_DEV1 = "/r"
-SlashCmdList["DEV"] = function(msg)
-    Debug:log(self, "reload command.")
-end
+-- SLASH_DEV1 = "/r"
+-- SlashCmdList["DEV"] = function(msg)
+--     Debug:log(self, "reload command.")
+-- end
 
 -- API Hooks
 local _CreateFrame = CreateFrame
@@ -223,7 +223,7 @@ CreateFrame = function(...)
     end
 
     function Frame:Texture(name, type, width, height, texture, ...)
-        local Texture = self:CreateTexture(name, type)
+        local Texture = self:CreateTexture(name, type, unpack(arg))
         Texture:SetTexture(texture)
         if width then
             Texture:SetWidth(width)
@@ -343,7 +343,7 @@ function Dispatcher:new()
         hooks = {},
     }
     setmetatable(instance, Dispatcher)
-    Debug:trace(Dispatcher, "new")
+    Debug:trace(instance, "new")
     return instance
 end
 function Dispatcher:map()
@@ -365,15 +365,20 @@ function Dispatcher:init(object)
     self.object_index = getmetatable(object).__index
     self.object = object
     self.name = object.name .. "Dispatcher"
-    
+
     Debug:trace(self, "init ", self.object.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
     self:map()
 end
 
 function Dispatcher:on(event, callback)
-    Debug:trace(self, "on ", self.object.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+    Debug:trace(self, "on ", self.object.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)], " Frame: ", self.Frame)
     self.Frame:RegisterEvent(event)
-    self.events[event] = callback
+
+    if not self.events[event] then
+        self.events[event] = {}
+    end
+
+    table.insert(self.events[event], callback)
 end
 function Dispatcher:callback(callback, ...)
     Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
@@ -401,17 +406,22 @@ function Dispatcher:hook(func, callback)
     end
 end
 function Dispatcher:dispatch(e)
-    local func = nil
-    if e == "ADDON_LOADED" and arg1 == self.object.name then
-        func = self.object["load"]
-    elseif e ~= "ADDON_LOADED" then
-        func = self.events[e]
-    else
-        return
-    end
+    Debug:trace(self, "dispatch Event: ", e, " arg1: ", arg1, " match: ", arg1 == self.object.name)
 
-    Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
-    self:callback(func)
+    if self.events[e] then
+        if e == "ADDON_LOADED" and arg1 == self.object.name then
+            for _, func in ipairs(self.events[e]) do
+                Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
+                self:callback(func)
+            end
+        elseif e ~= "ADDON_LOADED" then
+            for _, func in ipairs(self.events[e]) do
+
+                Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
+                self:callback(func)
+            end
+        end
+    end
 end
 function Dispatcher:listen()
     Debug:trace(self, "listen ", self.object.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
@@ -419,7 +429,9 @@ function Dispatcher:listen()
     self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
 end
 
-main()
+xpcall(main, function (err)
+    print(err)
+end)
 
 -- UI
 function Ledger:UI(Frame)
@@ -434,10 +446,10 @@ function Ledger:UI(Frame)
     local days = {1,2,3,4,6,7,9,10,11,15,20,21,22,25,26,27,28}
     local monthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 
-    LedgerFrame = CreateFrame("Frame", "LedgerFrame", Frame)
+    LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
     LedgerFrame:SetWidth(384)
     LedgerFrame:SetHeight(512)
-    LedgerFrame:SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
+    LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
     LedgerFrame:SetMovable(true)
 
     local function AddLine(text)
@@ -514,7 +526,6 @@ function Ledger:UI(Frame)
     CloseButton = LedgerFrame:CreateFrame("Button", nil, LedgerFrame, "UIPanelCloseButton")
     CloseButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -30, -8)
 
-    local this = self
     PrevButton = LedgerFrame:CreateFrame("Button", "PrevDayButton")
     PrevButton:SetSize(28, 28)
     PrevButton:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 91, -40)
@@ -619,5 +630,6 @@ function Ledger:UI(Frame)
     AddLine([[Third Entry]])
     AddLine([[Foo Entry]])
     AddLine([[Last Entry]])
+    Debug:trace(self, "UI: initialized Frame: ", Frame)
     return LedgerFrame
 end
