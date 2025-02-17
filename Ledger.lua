@@ -5,7 +5,7 @@ setfenv(1, _G)
 
 -- Own code
 local Ledger, Money
-local Debug, Loader
+local Debug, Dispatcher
 
 local main = function ()
     Ledger = {
@@ -71,7 +71,7 @@ local main = function ()
         self.money = money
     end
 
-    loader = Loader:new()
+    loader = Dispatcher:new()
     ledger = Ledger:new()
     loader:init(ledger)
     loader:on("ADDON_LOADED", ledger.load)
@@ -80,7 +80,7 @@ local main = function ()
     loader:listen()
 
 
-    loader2 = Loader:new()
+    loader2 = Dispatcher:new()
     money = Money:new()
     loader2:init(money)
     loader2:on("PLAYER_LOGIN", money.enable)
@@ -284,15 +284,15 @@ function Debug:trace(caller, ...)
 end
 
 
--- Loader lib
-Loader = {
-    name = "Loader",
+-- Dispatcher lib
+Dispatcher = {
+    name = "Dispatcher",
     DEBUG = true,
     LOG_LEVEL="TRACE",
     LOG_COLOR="7DF9FF",
 }
-function Loader:new(object)
-    Loader.__index = Loader
+function Dispatcher:new(object)
+    Dispatcher.__index = Dispatcher
 
     local instance = {    
         name = self.name,
@@ -305,11 +305,11 @@ function Loader:new(object)
         object_map_lookup = {},
         hooks = {},
     }
-    setmetatable(instance, Loader)
-    Debug:trace(Loader, "new")
+    setmetatable(instance, Dispatcher)
+    Debug:trace(Dispatcher, "new")
     return instance
 end
-function Loader:map()
+function Dispatcher:map()
     for function_name,func in pairs(self.object_index) do
         if function_name ~= "new" and type(func) == "function" then
             local callback = self.object_index[function_name]
@@ -323,7 +323,7 @@ function Loader:map()
         end
     end
 end
-function Loader:init(object)
+function Dispatcher:init(object)
     self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
     self.object_index = getmetatable(object).__index
     self.object = object
@@ -332,17 +332,17 @@ function Loader:init(object)
     self:map()
 end
 
-function Loader:on(event, callback)
+function Dispatcher:on(event, callback)
     Debug:trace(self, "on ", self.object.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
     self.Frame:RegisterEvent(event)
     self.events[event] = callback
 end
-function Loader:callback(callback, ...)
+function Dispatcher:callback(callback, ...)
     Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
     return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
 end
-function Loader:hook(func, callback)
+function Dispatcher:hook(func, callback)
     Debug:trace(self, "hook: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
     if not _G[func] then
@@ -362,7 +362,7 @@ function Loader:hook(func, callback)
         return self.hooks[func](unpack(arg))
     end
 end
-function Loader:dispatch(e)
+function Dispatcher:dispatch(e)
     local func = nil
     if e == "ADDON_LOADED" and arg1 == self.object.name then
         func = self.object["load"]
@@ -375,7 +375,7 @@ function Loader:dispatch(e)
     Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
     self:callback(func)
 end
-function Loader:listen()
+function Dispatcher:listen()
     Debug:trace(self, "listen ", self.object.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
 
     self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
