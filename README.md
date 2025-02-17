@@ -1,3 +1,4 @@
+```lua
 local Debug
 local Dispatcher, Ledger, Money
 
@@ -121,6 +122,7 @@ local main = function ()
 end
 
 main()
+
 -- UI
 function Ledger:UI(Frame)
     local LedgerFrame
@@ -140,32 +142,6 @@ function Ledger:UI(Frame)
     LedgerFrame:SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
     LedgerFrame:SetMovable(true)
 
-
-
-    -- Function to update the day display or any other UI elements
-    function UpdateDateDisplay()
-        -- This function will update the date displayed on the UI
-        -- You can add code to recalculate the positions of day buttons or any other UI elements
-        print("Current Day: " .. day)
-    end
-    function PrevDay()
-        -- Decrease day by 1 (you may want to wrap around to previous month if needed)
-        day = day - 1
-        if day < 1 then
-            day = 31  -- Wrap around if going below 1
-        end
-        -- Update the displayed day (recalculate positions or other elements)
-        UpdateDateDisplay()
-    end
-    function NextDay()
-        -- Increase day by 1 (you may want to wrap around to next month if needed)
-        day = day + 1
-        if day > 31 then
-            day = 1  -- Wrap around if going above 31
-        end
-        -- Update the displayed day (recalculate positions or other elements)
-        UpdateDateDisplay()
-    end
     local function AddLine(text)
         local numLines = ContentFrame.numLines or 0
         local yOffset = -numLines * 20  -- adjust vertical spacing as needed
@@ -240,19 +216,26 @@ function Ledger:UI(Frame)
     CloseButton = LedgerFrame:CreateFrame("Button", nil, LedgerFrame, "UIPanelCloseButton")
     CloseButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -30, -8)
 
+    local this = self
     PrevButton = LedgerFrame:CreateFrame("Button", "PrevDayButton")
     PrevButton:SetSize(28, 28)
     PrevButton:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 91, -40)
     PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
     PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
-    PrevButton:SetScript("OnClick", PrevDay)
+    PrevButton:SetScript("OnClick", function () 
+        Debug:trace(self, "PrevButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_PREV_ONCLICK") 
+    end)
 
     NextButton = LedgerFrame:CreateFrame("Button", "NextDayButton")
     NextButton:SetSize(28, 28)
     NextButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -44, -40)
     NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
     NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
-    NextButton:SetScript("OnClick", NextDay)
+    NextButton:SetScript("OnClick", function () 
+        Debug:trace(self, "NextButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_NEXT_ONCLICK") 
+    end)
 
     -- Dropdown
     DayDropdown = LedgerFrame:CreateFrame("Frame", "DayDropdown", LedgerFrame, "UIDropDownMenuTemplate")
