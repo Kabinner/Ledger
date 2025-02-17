@@ -257,6 +257,7 @@ end
 Debug = {
     INFO="INFO",
     TRACE="TRACE",
+    LOG_COLOR="ffd700"
 }
 function Debug:print(_, level, ...)
     if type(_) == "table" and not _.DEBUG then
@@ -269,7 +270,7 @@ function Debug:print(_, level, ...)
     end
 
     if type(_) == "table" and _.name then 
-        color = "|cffffd700"
+        color = "|cff" .. Debug.LOG_COLOR
         if _.LOG_COLOR and _.LOG_COLOR ~= "" then
             color = "|cff" .. _.LOG_COLOR
         end
