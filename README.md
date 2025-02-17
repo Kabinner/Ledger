@@ -105,7 +105,6 @@ local main = function ()
     ledgerDispatcher:on("DISPLAY_UPDATE_DAY", ledger.UpdateDateDisplay)
     ledgerDispatcher:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
     ledgerDispatcher:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
-    
     ledgerDispatcher:listen()
 
 
