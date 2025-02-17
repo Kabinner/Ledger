@@ -16,11 +16,15 @@ local main = function ()
         day = 1,
     }
 
-    function Ledger:new()
+    function Ledger:new(dispatcher)
         Ledger.__index = Ledger
-        local instance = {}
+        local instance = {
+            name = self.name,
+            event = dispatcher,
+            day = self.day
+        }
         setmetatable(instance, Ledger)
-        Debug:trace(Ledger, "new")
+        Debug:trace(Ledger, "new: ", instance, " Dispatcher", dispatcher)
         return instance
     end
 
@@ -41,23 +45,24 @@ local main = function ()
     function Ledger:disable()
     end
 
-    function Ledger:UpdateDateDisplay()
-        print("Current Day: " .. day)
+    function Ledger:UpdateDateDisplay(Frame)
+        Debug:trace(self, " Ledger:UpdateDateDisplay: ", "Current Day: ", self.day)
     end
-    function Ledger:PrevDay()
+    function Ledger:PrevDay(Frame)
+        Debug:trace(self, "Ledger:PrevDay: day:", self.day)
         self.day = self.day - 1
         if self.day < 1 then
-            day = 31  -- Wrap around if going below 1
+            self.day = 31  -- Wrap around if going below 1
         end
-
-        self:UpdateDateDisplay()
+        self.event:dispatch("DISPLAY_UPDATE_DAY")
     end
-    function Ledger:NextDay()
+    function Ledger:NextDay(Frame)
+        Debug:trace(self, "Ledger:NextDay: day:", self.day)
         self.day = self.day + 1
         if self.day > 31 then
             self.day = 1  -- Wrap around if going above 31
         end
-        self:UpdateDateDisplay()
+        self.event:dispatch("DISPLAY_UPDATE_DAY")
     end
 
     Money = {
@@ -69,7 +74,9 @@ local main = function ()
     }
     function Money:new()
         Money.__index = Money
-        local instance = {}
+        local instance = {
+            money = self.money
+        }
         setmetatable(instance, Money)
         Debug:trace(Money, "new")
         return instance
@@ -92,11 +99,15 @@ local main = function ()
     end
 
     loader = Dispatcher:new()
-    ledger = Ledger:new()
+    ledger = Ledger:new(loader)
     loader:init(ledger)
     loader:on("ADDON_LOADED", ledger.load)
     loader:on("PLAYER_LOGIN", ledger.enable)
     loader:on("PLAYER_LOGOUT", ledger.disable)
+    loader:on("DISPLAY_UPDATE_DAY", ledger.UpdateDateDisplay)
+    loader:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
+    loader:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
+    
     loader:listen()
 
 
@@ -305,7 +316,7 @@ function Debug:log(caller, ...)
     self:print(caller, Debug.INFO, unpack(arg))
 end
 function Debug:trace(caller, ...)
-    if not caller or caller.LOG_LEVEL ~= self.TRACE then
+    if not caller or type(caller) == 'table' and caller.LOG_LEVEL ~= self.TRACE then
         return
     end
     self:print(caller, Debug.TRACE, unpack(arg))
@@ -369,7 +380,7 @@ end
 function Dispatcher:callback(callback, ...)
     Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
 
-    return self.object_map_reversed[id(callback)](self.object_index, self.Frame, unpack(arg))
+    return self.object_map_reversed[id(callback)](self.object, self.Frame, unpack(arg))
 end
 function Dispatcher:hook(func, callback)
     Debug:trace(self, "hook: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
@@ -431,32 +442,6 @@ function Ledger:UI(Frame)
     LedgerFrame:SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
     LedgerFrame:SetMovable(true)
 
-
-
-    -- Function to update the day display or any other UI elements
-    function UpdateDateDisplay()
-        -- This function will update the date displayed on the UI
-        -- You can add code to recalculate the positions of day buttons or any other UI elements
-        print("Current Day: " .. day)
-    end
-    function PrevDay()
-        -- Decrease day by 1 (you may want to wrap around to previous month if needed)
-        day = day - 1
-        if day < 1 then
-            day = 31  -- Wrap around if going below 1
-        end
-        -- Update the displayed day (recalculate positions or other elements)
-        UpdateDateDisplay()
-    end
-    function NextDay()
-        -- Increase day by 1 (you may want to wrap around to next month if needed)
-        day = day + 1
-        if day > 31 then
-            day = 1  -- Wrap around if going above 31
-        end
-        -- Update the displayed day (recalculate positions or other elements)
-        UpdateDateDisplay()
-    end
     local function AddLine(text)
         local numLines = ContentFrame.numLines or 0
         local yOffset = -numLines * 20  -- adjust vertical spacing as needed
@@ -531,19 +516,26 @@ function Ledger:UI(Frame)
     CloseButton = LedgerFrame:CreateFrame("Button", nil, LedgerFrame, "UIPanelCloseButton")
     CloseButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -30, -8)
 
+    local this = self
     PrevButton = LedgerFrame:CreateFrame("Button", "PrevDayButton")
     PrevButton:SetSize(28, 28)
     PrevButton:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 91, -40)
     PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
     PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
-    PrevButton:SetScript("OnClick", PrevDay)
+    PrevButton:SetScript("OnClick", function () 
+        Debug:trace(self, "PrevButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_PREV_ONCLICK") 
+    end)
 
     NextButton = LedgerFrame:CreateFrame("Button", "NextDayButton")
     NextButton:SetSize(28, 28)
     NextButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -44, -40)
     NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
     NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
-    NextButton:SetScript("OnClick", NextDay)
+    NextButton:SetScript("OnClick", function () 
+        Debug:trace(self, "NextButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_NEXT_ONCLICK") 
+    end)
 
     -- Dropdown
     DayDropdown = LedgerFrame:CreateFrame("Frame", "DayDropdown", LedgerFrame, "UIDropDownMenuTemplate")
