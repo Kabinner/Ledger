@@ -13,6 +13,7 @@ local main = function ()
         DEBUG = true,
         LOG_LEVEL = "TRACE",
         LOG_COLOR = "",
+        day = 1,
     }
 
     function Ledger:new()
@@ -38,6 +39,25 @@ local main = function ()
         end
     end
     function Ledger:disable()
+    end
+
+    function Ledger:UpdateDateDisplay()
+        print("Current Day: " .. day)
+    end
+    function Ledger:PrevDay()
+        self.day = self.day - 1
+        if self.day < 1 then
+            day = 31  -- Wrap around if going below 1
+        end
+
+        self:UpdateDateDisplay()
+    end
+    function Ledger:NextDay()
+        self.day = self.day + 1
+        if self.day > 31 then
+            self.day = 1  -- Wrap around if going above 31
+        end
+        self:UpdateDateDisplay()
     end
 
     Money = {
