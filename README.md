@@ -1,6 +1,7 @@
 <p align="center"><img src="https://github.com/user-attachments/assets/d3852943-d71e-4c3c-83c6-9fa6d261d178" width="50%" height="50%"></p>
 
 ```lua
+-- Own code
 local Debug
 local Dispatcher, Ledger, Money
 
@@ -95,31 +96,31 @@ local main = function ()
         self.money = money
     end
 
-    loader = Dispatcher:new()
-    ledger = Ledger:new(loader)
-    loader:init(ledger)
-    loader:on("ADDON_LOADED", ledger.load)
-    loader:on("PLAYER_LOGIN", ledger.enable)
-    loader:on("PLAYER_LOGOUT", ledger.disable)
-    loader:on("DISPLAY_UPDATE_DAY", ledger.UpdateDateDisplay)
-    loader:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
-    loader:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
+    ledgerDispatcher = Dispatcher:new()
+    ledger = Ledger:new(ledgerDispatcher)
+    ledgerDispatcher:init(ledger)
+    ledgerDispatcher:on("ADDON_LOADED", ledger.load)
+    ledgerDispatcher:on("PLAYER_LOGIN", ledger.enable)
+    ledgerDispatcher:on("PLAYER_LOGOUT", ledger.disable)
+    ledgerDispatcher:on("DISPLAY_UPDATE_DAY", ledger.UpdateDateDisplay)
+    ledgerDispatcher:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
+    ledgerDispatcher:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
     
-    loader:listen()
+    ledgerDispatcher:listen()
 
 
-    loader2 = Dispatcher:new()
+    moneyDispatcher = Dispatcher:new()
     money = Money:new()
-    loader2:init(money)
-    loader2:on("PLAYER_LOGIN", money.enable)
-    loader2:on("PLAYER_MONEY", money.track)
-    loader2:hook("RepairAllItems", money.track)
-    loader2:hook("UseContainerItem", money.track)
-    loader2:hook("PickupMerchantItem", money.track)
-    loader2:hook("SendMail", money.track)
-    loader2:hook("PlaceAuctionBid", money.track)
-    loader2:hook("PickupPlayerMoney", money.track)
-    loader2:listen()
+    moneyDispatcher:init(money)
+    moneyDispatcher:on("PLAYER_LOGIN", money.enable)
+    moneyDispatcher:on("PLAYER_MONEY", money.track)
+    moneyDispatcher:hook("RepairAllItems", money.track)
+    moneyDispatcher:hook("UseContainerItem", money.track)
+    moneyDispatcher:hook("PickupMerchantItem", money.track)
+    moneyDispatcher:hook("SendMail", money.track)
+    moneyDispatcher:hook("PlaceAuctionBid", money.track)
+    moneyDispatcher:hook("PickupPlayerMoney", money.track)
+    moneyDispatcher:listen()
 
 end
 
