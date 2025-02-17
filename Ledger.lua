@@ -401,8 +401,6 @@ function Ledger:UI(Frame)
     LedgerFrame:SetHeight(512)
     LedgerFrame:SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
     LedgerFrame:SetMovable(true)
-    LedgerFrame:EnableMouse(true)
-    LedgerFrame:RegisterForDrag("LeftButton")
 
 
 
