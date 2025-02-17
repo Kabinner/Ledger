@@ -248,7 +248,7 @@ Debug = {
     INFO="INFO",
     TRACE="TRACE",
 }
-function Debug:print(_, level, color, ...)
+function Debug:print(_, level, ...)
     if type(_) == "table" and not _.DEBUG then
         return
     end
@@ -257,30 +257,27 @@ function Debug:print(_, level, color, ...)
     if type(_) == "string" then
         msg = _
     end
-    
+
     if type(_) == "table" and _.name then 
+        color = "|cffffd700"
+        if _.LOG_COLOR and _.LOG_COLOR ~= "" then
+            color = "|cff" .. _.LOG_COLOR
+        end
+
         msg =  color .. "[".. level .."] ".. _.name .."[" .. id(_) .."]:"
     end
     print(msg, unpack(arg))
 
 end
 function Debug:log(caller, ...)
-    color = "|cffffd700"
-    if caller.LOG_COLOR and caller.LOG_COLOR ~= "" then
-        color = "|cff" .. caller.LOG_COLOR
-    end
 
-    self:print(caller, Debug.INFO, color, unpack(arg))
+    self:print(caller, Debug.INFO, unpack(arg))
 end
 function Debug:trace(caller, ...)
     if not caller or caller.LOG_LEVEL ~= self.TRACE then
         return
     end
-    color = "|cffffd700"
-    if caller.LOG_COLOR and caller.LOG_COLOR ~= "" then
-        color = "|cff" .. caller.LOG_COLOR
-    end
-    self:print(caller, Debug.TRACE, color, unpack(arg))
+    self:print(caller, Debug.TRACE, unpack(arg))
 end
 
 
