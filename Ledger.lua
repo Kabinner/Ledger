@@ -113,8 +113,10 @@ function string.unpack(_, sep)
     if not sep then
         sep = " "
     end
-    for idx, value in ipairs(_) do
-        args[idx] = value .. sep
+    for idx = 1,table.getn(_) do
+        if idx ~= "n" then
+            args[idx] = tostring(_[idx]) .. sep
+        end
     end  
     return unpack(args)
 end    
@@ -171,6 +173,11 @@ function print(_, ...)
     end
 
     DEFAULT_CHAT_FRAME:AddMessage(msg);
+end
+-- @todo Add '/r' for developing
+SLASH_DEV1 = "/ledger"
+SlashCmdList["DEV"] = function(msg)
+    Debug:log(self, "reload command.")
 end
 
 -- API Hooks
