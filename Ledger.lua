@@ -311,6 +311,7 @@ end
 
 -- Debug
 Debug = {
+    ERROR="ERROR",
     INFO="INFO",
     TRACE="TRACE",
     LOG_COLOR="ffd700"
@@ -362,6 +363,10 @@ function Debug:trace(caller, ...)
         return
     end
     self:print(caller, Debug.TRACE, unpack(arg))
+end
+function Debug:error(caller, ...)
+    caller.color = "FF2400"
+    self:print(caller, Debug.ERROR, unpack(arg))
 end
 
 
@@ -429,7 +434,7 @@ function Dispatcher:hook(fn, callback)
     Debug:trace(self, "hook: ", fn, " -> ", target_obj.name, ":", callback_id)
     
     if not target_obj then
-        Debug:trace(self, "ERROR: No object found for callback ", callback_id)
+        Debug:error(self, "No object found for callback ", callback_id)
         return
     end
     
@@ -442,7 +447,7 @@ function Dispatcher:on(event, callback)
     local target_obj, obj_data = self:target(callback)
     
     if not target_obj then
-        Debug:trace(self, "ERROR: No object found for callback ", callback_id)
+        Debug:error(self, "No object found for callback ", callback_id)
         return
     end
     
@@ -489,7 +494,7 @@ function Dispatcher:trigger(obj, obj_data, handlers, ...)
         end)
         
         if not success then
-            Debug:trace(self, "ERROR in ", obj.name, ":", fn_name, " - ", err)
+            Debug:error(self, "trigger in ", obj.name, ":", fn_name, " - ", err)
         end
     end
 end
@@ -506,7 +511,7 @@ end
 
 
 xpcall(main, function (err)
-    print(err)
+    Debug:error(self, "main ", err)
 end)
 
 -- UI
