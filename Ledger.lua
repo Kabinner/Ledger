@@ -42,7 +42,7 @@ local main = function ()
     end
 
     function Ledger:enable(Frame)
-        print(self, "Enable. Frame: ", Frame)
+        Debug:trace(self, "Enable. Frame: ", Frame)
 
         SLASH_LEDGER1 = "/ledger"
         SlashCmdList["LEDGER"] = function(msg)
@@ -122,7 +122,7 @@ local main = function ()
 
     function Money:enable(Frame)
         self.money = GetMoney()
-        print(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
+        Debug:trace(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
     end
 
     function Money:track(Frame, ...)
