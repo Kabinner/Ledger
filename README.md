@@ -143,7 +143,6 @@ local main = function ()
     ledger = Ledger:new(event)
     money = Money:new()
 
-    Debug:trace("Event.add: ", event)
     event:bind(ledger)
     event:bind(money)
 
