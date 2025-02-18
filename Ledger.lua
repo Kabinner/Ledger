@@ -339,21 +339,20 @@ function Debug:print(_, level, ...)
 
     local color
     color = "|cff" .. Debug.LOG_COLOR
-    if _.LOG_COLOR and _.LOG_COLOR ~= "" then
+    if type(_) == "table" and _.LOG_COLOR and _.LOG_COLOR ~= "" then
         color = "|cff" .. _.LOG_COLOR
     end
 
     local msg = color
 
+    msg = msg .. "[".. level .."] "
+
     if type(_) == "string" then
         msg = msg .. _
-    end
-    
-    msg = msg .. "[".. level .."] "
-    if type(_) == "table" and _.name then 
+    elseif type(_) == "table" and _.name then 
         msg = msg .. _.name .."[" .. id(_) .."]:"
     end
-    
+
     print(msg, unpack(arg))
 
 end
