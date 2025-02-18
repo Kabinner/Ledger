@@ -410,7 +410,7 @@ function Dispatcher:bind(obj)
     Debug:trace(self, "added ", obj.name, "[", id(obj), "]")
 end
 
-function Dispatcher:obj(callback)
+function Dispatcher:target(callback)
     local callback_id = id(callback)
 
     local target_obj
@@ -425,7 +425,7 @@ end
 function Dispatcher:hook(fn, callback)
 
     local callback_id = id(callback)
-    local target_obj, obj_data = self:obj(callback)
+    local target_obj, obj_data = self:target(callback)
     Debug:trace(self, "hook: ", fn, " -> ", target_obj.name, ":", callback_id)
     
     if not target_obj then
@@ -439,7 +439,7 @@ function Dispatcher:hook(fn, callback)
 end
 function Dispatcher:on(event, callback)
     local callback_id = id(callback)
-    local target_obj, obj_data = self:obj(callback)
+    local target_obj, obj_data = self:target(callback)
     
     if not target_obj then
         Debug:trace(self, "ERROR: No object found for callback ", callback_id)
