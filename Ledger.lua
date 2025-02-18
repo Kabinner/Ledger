@@ -8,23 +8,30 @@ local Debug
 local Dispatcher, Ledger, Money
 
 local main = function ()
+
     Ledger = {
         name = "Ledger",
         DEBUG = true,
         LOG_LEVEL = "TRACE",
         LOG_COLOR = "",
         day = 1,
+        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
+        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
+        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
+        PrevButton = nil, NextButton = nil,
+        DayDropdown = nil, MonthDropdown = nil,
     }
 
     function Ledger:new(dispatcher)
         Ledger.__index = Ledger
         local instance = {
             name = self.name,
+            day = self.day,
             event = dispatcher,
-            day = self.day
+            LedgerFrame = nil,
         }
         setmetatable(instance, Ledger)
-        Debug:trace(Ledger, "new: ", instance, " Dispatcher: ", instance.event)
+        Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
         return instance
     end
 
@@ -44,26 +51,57 @@ local main = function ()
     end
     function Ledger:disable()
     end
+    local function AddText(text)
+        local numLines = self.ContentFrame.numLines or 0
+        local yOffset = -numLines * 20  -- adjust vertical spacing as needed
 
-    function Ledger:UpdateDateDisplay(Frame)
-        Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
+        local line = ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        line:SetPoint("TOPLEFT", ContentFrame, "TOPLEFT", 0, yOffset)
+        line:SetText(text)
+        self.event:dispatch("CONTENT_UPDATE")
     end
-    function Ledger:PrevDay(Frame)
+    function Ledger:ScrollBar_Update()
+        -- Fix the off-by-one error
+        local maxScroll = math.max(0, newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
+        -- Apply new scroll limits
+        self.ScrollBar:SetMinMaxValues(0, maxScroll)
+        -- Hide scrollbar if not needed
+        if maxScroll <= 0 then
+            self.ScrollBar:Hide()
+            self.ScrollBar:SetValue(0)  -- Reset scroll position
+        else
+            self.ScrollBar:Show()
+        end
+    end
+    function Ledger:Content_Update()
+        self.ContentFrame.numLines = numLines + 1
+        local newHeight = self.ContentFrame.numLines * 20
+        self.ContentFrame:SetHeight(newHeight)
+    end
+    function Ledger:Update()
+        -- self.Content_Update()
+        -- self.ScrollBar_Update()
+
+        Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
+
+    end
+    function Ledger:PrevDay(...)
         Debug:trace(self, "PrevDay: day:", self.day)
         self.day = self.day - 1
         if self.day < 1 then
             self.day = 31  -- Wrap around if going below 1
         end
-        self.event:dispatch("DISPLAY_UPDATE_DAY")
+        self.event:dispatch("DATE_CHANGED")
     end
-    function Ledger:NextDay(Frame)
+    function Ledger:NextDay(...)
         Debug:trace(self, "NextDay: day:", self.day)
         self.day = self.day + 1
         if self.day > 31 then
             self.day = 1  -- Wrap around if going above 31
         end
-        self.event:dispatch("DISPLAY_UPDATE_DAY")
+        self.event:dispatch("DATE_CHANGED")
     end
+
 
     Money = {
         name = "Money",
@@ -98,29 +136,33 @@ local main = function ()
         self.money = money
     end
 
-    ledgerDispatcher = Dispatcher:new()
-    ledger = Ledger:new(ledgerDispatcher)
-    ledgerDispatcher:init(ledger)
-    ledgerDispatcher:on("ADDON_LOADED", ledger.load)
-    ledgerDispatcher:on("PLAYER_LOGIN", ledger.enable)
-    ledgerDispatcher:on("PLAYER_LOGOUT", ledger.disable)
-    ledgerDispatcher:on("DISPLAY_UPDATE_DAY", ledger.UpdateDateDisplay)
-    ledgerDispatcher:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
-    ledgerDispatcher:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
-    ledgerDispatcher:listen()
+    local event = Dispatcher:new()
 
-    moneyDispatcher = Dispatcher:new()
+    ledger = Ledger:new(event)
     money = Money:new()
-    moneyDispatcher:init(money)
-    moneyDispatcher:on("PLAYER_LOGIN", money.enable)
-    moneyDispatcher:on("PLAYER_MONEY", money.track)
-    moneyDispatcher:hook("RepairAllItems", money.track)
-    moneyDispatcher:hook("UseContainerItem", money.track)
-    moneyDispatcher:hook("PickupMerchantItem", money.track)
-    moneyDispatcher:hook("SendMail", money.track)
-    moneyDispatcher:hook("PlaceAuctionBid", money.track)
-    moneyDispatcher:hook("PickupPlayerMoney", money.track)
-    moneyDispatcher:listen()
+
+    Debug:trace("Event.add: ", event)
+    event:add(ledger)
+    event:add(money)
+
+    event:on("ADDON_LOADED", ledger.load)
+    event:on("PLAYER_LOGIN", ledger.enable)
+    event:on("PLAYER_LOGOUT", ledger.disable)
+    event:on("PLAYER_LOGIN", money.enable)
+
+    event:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
+    event:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
+    event:on("DATE_CHANGED", ledger.Update)
+
+    event:on("PLAYER_MONEY", money.track)
+
+    event:hook(RepairAllItems, money.track)
+    event:hook(UseContainerItem, money.track)
+    event:hook(PickupMerchantItem, money.track)
+    event:hook(SendMail, money.track)
+    event:hook(PlaceAuctionBid, money.track)
+    event:hook(PickupPlayerMoney, money.track)
+    event:listen()
 
 end
 
@@ -255,7 +297,7 @@ CreateFrame = function(...)
     end
 
 
-    function Frame:Dropdown(label, width, data)
+    function Frame:SetDropdown(label, width, data)
             -- Initialize the dropdown menu
         local function Initialize()
     
@@ -263,7 +305,7 @@ CreateFrame = function(...)
                 local info = {
                     text = val,
                     value = i,
-                    arg1 = i
+                    arg1 = i,
                 }
                 info.func = function(value)
                     UIDropDownMenu_SetText(data[value], Frame)
@@ -321,113 +363,154 @@ function Debug:trace(caller, ...)
 end
 
 
--- Dispatcher lib
 Dispatcher = {
     name = "Dispatcher",
     DEBUG = true,
-    LOG_LEVEL="TRACE",
-    LOG_COLOR="7DF9FF",
+    LOG_LEVEL = "TRACE",
+    LOG_COLOR = "7DF9FF",
 }
-function Dispatcher:new()
-    Dispatcher.__index = Dispatcher
 
-    local instance = {    
+function Dispatcher:new()
+    local instance = {
         name = self.name,
-        Frame = {},
-        events = {},
-        object = {},
-        object_index = {},
-        object_map = {},
-        object_map_reversed = {},
-        object_map_lookup = {},
+        Frame = CreateFrame("Frame", "FRAME_"..string.upper(self.name), UIParent),
+        objects = {},
         hooks = {},
     }
-    setmetatable(instance, Dispatcher)
+    setmetatable(instance, self)
+    self.__index = self
     Debug:trace(instance, "new")
     return instance
 end
-function Dispatcher:map()
-    for function_name,func in pairs(self.object_index) do
-        if function_name ~= "new" and type(func) == "function" then
-            local callback = self.object_index[function_name]
-            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", self.object.name, ".", function_name, " = ", callback)
-            self.object_map[function_name] = callback
 
-            Debug:trace(self, "map: ", self.object.name, "[", id(self.object), "] ", id(callback), " = ", self.object.name, ".", function_name)
-            self.object_map_reversed[id(callback)] = callback
+function Dispatcher:add(obj)
+    Debug:trace(self, "add ", obj.name, "[", id(obj), "]")
+    
+    local obj_data = {
+        object = obj,
+        object_map = {},
+        object_map_reversed = {},
+        object_map_lookup = {},
+        events = {},
+    }
+    
+    local obj_index = getmetatable(obj).__index
+    for fn_name, fn in pairs(obj_index) do
+        if fn_name ~= "new" and type(fn) == "function" then
+            Debug:trace(self, "map: ", obj.name, "[", id(obj), "] ", obj.name, ".", fn_name)
+            local fn_id = id(fn)
+            obj_data.object_map[fn_name] = fn
+            obj_data.object_map_reversed[fn_id] = fn
+            obj_data.object_map_lookup[fn_id] = fn_name
+        end
+    end
+    
+    self.objects[obj] = obj_data
+    Debug:trace(self, "added ", obj.name, "[", id(obj), "]")
+end
 
-            self.object_map_lookup[id(callback)] = function_name
+function Dispatcher:lookup(callback)
+    local callback_id = id(callback)
+    local target_obj
+
+    for obj, data in pairs(self.objects) do
+        if data.object_map_reversed[callback_id] then
+            target_obj = obj
+            return target_obj, data
         end
     end
 end
-function Dispatcher:init(object)
-    self.Frame = CreateFrame("Frame", "FRAME_" .. string.upper("%u*", self.name), UIParent)
-    self.object_index = getmetatable(object).__index
-    self.object = object
-    self.name = object.name .. "Dispatcher"
 
-    Debug:trace(self, "init ", self.object.name, "[", id(self.object), "/", id(self.object_index), "]", " Frame: ", self.Frame)
-    self:map()
-end
+function Dispatcher:hook(fn, callback)
 
-function Dispatcher:on(event, callback)
-    Debug:trace(self, "on ", self.object.name, "[", id(self.object), "] ", event, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)], " Frame: ", self.Frame)
-    self.Frame:RegisterEvent(event)
-
-    if not self.events[event] then
-        self.events[event] = {}
-    end
-
-    table.insert(self.events[event], callback)
-end
-function Dispatcher:callback(callback, ...)
-    Debug:trace(self, "callback: ", self.object.name, "[", id(self.object), "] ", self.object.name, ":", self.object_map_lookup[id(callback)])
-
-    return self.object_map_reversed[id(callback)](self.object, self.Frame, unpack(arg))
-end
-function Dispatcher:hook(func, callback)
-    Debug:trace(self, "hook: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
-
-    if not _G[func] then
-        Debug:trace(self, "ERROR: ", func, " -> ", self.object.name, ":", self.object_map_lookup[id(callback)])
+    local callback_id = id(callback)
+    local target_obj, obj_data = self:lookup(callback)
+    Debug:trace(self, "hook: ", fn, " -> ", target_obj.name, ":", callback_id)
+    
+    if not target_obj then
+        Debug:trace(self, "ERROR: No object found for callback ", callback_id)
         return
     end
-
-    self.hooks[func] = _G[func]
-    _G[func] = function(...)
-        args = {}
-        args[1] = func
-        for idx in ipairs(arg) do
-            args[idx+1] = arg
-        end
-        Debug:trace(self, "args: ", string.unpack(args))
-        self:callback(callback, unpack(args))
-        return self.hooks[func](unpack(arg))
-    end
+    
+    Debug:trace(self, "hook ", target_obj.name, "[", id(target_obj), "] ", 
+        event, " -> ", target_obj.name, ":", obj_data.object_map_lookup[callback_id])
+    
 end
+function Dispatcher:on(event, callback)
+    local callback_id = id(callback)
+    local target_obj, obj_data
+    
+    for obj, data in pairs(self.objects) do
+        if data.object_map_reversed[callback_id] then
+            target_obj = obj
+            obj_data = data
+            break
+        end
+    end
+    
+    if not target_obj then
+        Debug:trace(self, "ERROR: No object found for callback ", callback_id)
+        return
+    end
+    
+    Debug:trace(self, "on ", target_obj.name, "[", id(target_obj), "] ", 
+        event, " -> ", target_obj.name, ":", obj_data.object_map_lookup[callback_id])
+    
+    self.Frame:RegisterEvent(event)
+    
+    if not obj_data.events[event] then
+        obj_data.events[event] = {}
+    end
+    table.insert(obj_data.events[event], callback)
+end
+
 function Dispatcher:dispatch(e)
-    Debug:trace(self, "dispatch Event: ", e, " arg1: ", arg1, " match: ", arg1 == self.object.name)
-
-    if self.events[e] then
-        if e == "ADDON_LOADED" and arg1 == self.object.name then
-            for _, func in ipairs(self.events[e]) do
-                Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
-                self:callback(func)
-            end
-        elseif e ~= "ADDON_LOADED" then
-            for _, func in ipairs(self.events[e]) do
-
-                Debug:trace(self, "dispatch ", e, " -> ", self.object.name, ":", self.object_map_lookup[id(func)], "[", func, "]")
-                self:callback(func)
+    for obj, obj_data in pairs(self.objects) do
+        if event then
+            e = event
+        end
+        local handlers = obj_data.events[e]
+        if handlers then
+            if e == "ADDON_LOADED" then
+                if arg1 == obj.name then
+                    Debug:trace(self, "dispatch: e: ", e, " event: ", event, " obj: ", obj, " args: ", arg1)
+                    self:_trigger_handlers(obj, obj_data, handlers)
+                end
+            else
+                Debug:trace(self, "dispatch: e: ", e, " event: ", event, " obj: ", obj, " args: ", arg1)
+                self:_trigger_handlers(obj, obj_data, handlers)
             end
         end
     end
 end
-function Dispatcher:listen()
-    Debug:trace(self, "listen ", self.object.name, "[", id(self.object), "] ", "Frame: ", self.Frame)
 
-    self.Frame:SetScript('OnEvent', function() self:dispatch(event) end)
+function Dispatcher:_trigger_handlers(obj, obj_data, handlers, ...)
+    for _, callback in ipairs(handlers) do
+        local fn_id = id(callback)
+        local fn_name = obj_data.object_map_lookup[fn_id] or "unknown"
+        Debug:trace(self, "trigger ", obj.name, ":", fn_name, 
+            "[", fn_id, "] for ", obj.name, "[", id(obj), "]")
+        
+        local success, err = pcall(function()
+            obj_data.object_map_reversed[fn_id](obj, self.Frame, unpack(arg))
+        end)
+        
+        if not success then
+            Debug:trace(self, "ERROR in ", obj.name, ":", fn_name, " - ", err)
+        end
+    end
 end
+
+function Dispatcher:listen()
+    Debug:trace(self, "listen on frame ", self.Frame)
+
+    local event
+    self.Frame:SetScript("OnEvent", function()
+        Debug:trace(self, "Event name: ", event, " type: ", type(event) ," arg1: ", arg1)
+        self:dispatch(event)
+    end)
+end
+
 
 xpcall(main, function (err)
     print(err)
@@ -452,33 +535,6 @@ function Ledger:UI(Frame)
     LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
     LedgerFrame:SetMovable(true)
 
-    local function AddLine(text)
-        local numLines = ContentFrame.numLines or 0
-        local yOffset = -numLines * 20  -- adjust vertical spacing as needed
-
-        local line = ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        line:SetPoint("TOPLEFT", ContentFrame, "TOPLEFT", 0, yOffset)
-        line:SetText(text)
-
-        ContentFrame.numLines = numLines + 1
-        local newHeight = ContentFrame.numLines * 20
-
-        ContentFrame:SetHeight(newHeight)
-
-        -- Fix the off-by-one error
-        local maxScroll = math.max(0, newHeight - ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
-
-        -- Apply new scroll limits
-        ScrollBar:SetMinMaxValues(0, maxScroll)
-
-        -- Hide scrollbar if not needed
-        if maxScroll <= 0 then
-            ScrollBar:Hide()
-            ScrollBar:SetValue(0)  -- Reset scroll position
-        else
-            ScrollBar:Show()
-        end
-    end
     local function GetDaysInMonth(month)
         local daysInMonth = {
             31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
@@ -549,11 +605,11 @@ function Ledger:UI(Frame)
     -- Dropdown
     DayDropdown = LedgerFrame:CreateFrame("Frame", "DayDropdown", LedgerFrame, "UIDropDownMenuTemplate")
     DayDropdown:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 100, -40)
-    DayDropdown:Dropdown("Day", 60, days)
+    DayDropdown:SetDropdown("Day", 48, days)
 
     MonthDropdown = LedgerFrame:CreateFrame("Frame", "MonthDropdown", LedgerFrame, "UIDropDownMenuTemplate")
     MonthDropdown:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 180, -40)
-    MonthDropdown:Dropdown("Month", 100, monthNames)
+    MonthDropdown:SetDropdown("Month", 100, monthNames)
 
 
 
