@@ -9,133 +9,6 @@ local Dispatcher, Ledger, Money
 
 local main = function ()
 
-    Ledger = {
-        name = "Ledger",
-        DEBUG = true,
-        LOG_LEVEL = "TRACE",
-        LOG_COLOR = "",
-        day = 1,
-        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
-        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
-        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
-        PrevButton = nil, NextButton = nil,
-        DayDropdown = nil, MonthDropdown = nil,
-    }
-
-    function Ledger:new(dispatcher)
-        Ledger.__index = Ledger
-        local instance = {
-            name = self.name,
-            day = self.day,
-            event = dispatcher,
-            LedgerFrame = nil,
-        }
-        setmetatable(instance, Ledger)
-        Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
-        return instance
-    end
-
-    function Ledger:load(Frame)
-        print(self, "load Frame: ", Frame)
-
-        self:UI(Frame)
-    end
-
-    function Ledger:enable(Frame)
-        Debug:trace(self, "Enable. Frame: ", Frame)
-
-        SLASH_LEDGER1 = "/ledger"
-        SlashCmdList["LEDGER"] = function(msg)
-            Debug:log(self, "/ledger command.")
-        end
-    end
-    function Ledger:disable()
-    end
-    local function AddText(text)
-        local numLines = self.ContentFrame.numLines or 0
-        local yOffset = -numLines * 20  -- adjust vertical spacing as needed
-
-        local line = ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-        line:SetPoint("TOPLEFT", ContentFrame, "TOPLEFT", 0, yOffset)
-        line:SetText(text)
-        self.event:dispatch("CONTENT_UPDATE")
-    end
-    function Ledger:ScrollBar_Update()
-        -- Fix the off-by-one error
-        local maxScroll = math.max(0, newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
-        -- Apply new scroll limits
-        self.ScrollBar:SetMinMaxValues(0, maxScroll)
-        -- Hide scrollbar if not needed
-        if maxScroll <= 0 then
-            self.ScrollBar:Hide()
-            self.ScrollBar:SetValue(0)  -- Reset scroll position
-        else
-            self.ScrollBar:Show()
-        end
-    end
-    function Ledger:Content_Update()
-        self.ContentFrame.numLines = numLines + 1
-        local newHeight = self.ContentFrame.numLines * 20
-        self.ContentFrame:SetHeight(newHeight)
-    end
-    function Ledger:Update()
-        -- self.Content_Update()
-        -- self.ScrollBar_Update()
-
-        Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
-
-    end
-    function Ledger:PrevDay(...)
-        Debug:trace(self, "PrevDay: day:", self.day)
-        self.day = self.day - 1
-        if self.day < 1 then
-            self.day = 31  -- Wrap around if going below 1
-        end
-        self.event:dispatch("DATE_CHANGED")
-    end
-    function Ledger:NextDay(...)
-        Debug:trace(self, "NextDay: day:", self.day)
-        self.day = self.day + 1
-        if self.day > 31 then
-            self.day = 1  -- Wrap around if going above 31
-        end
-        self.event:dispatch("DATE_CHANGED")
-    end
-
-
-    Money = {
-        name = "Money",
-        money = 0,
-        DEBUG = true,
-        LOG_LEVEL = "TRACE",
-        LOG_COLOR = "39FF14",
-    }
-    function Money:new()
-        Money.__index = Money
-        local instance = {
-            money = self.money
-        }
-        setmetatable(instance, Money)
-        Debug:trace(Money, "new")
-        return instance
-    end
-
-    function Money:enable(Frame)
-        self.money = GetMoney()
-        Debug:trace(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
-    end
-
-    function Money:track(Frame, ...)
-        Debug:trace(self, "args: ", string.unpack(arg))
-        local money = GetMoney()
-        local difference = money - self.money
-        if difference ~= 0 then
-            local action = (difference > 0) and "Gained" or "Lost"
-            print(self, "track ", action, " ", math.abs(difference), " copper")
-        end
-        self.money = money
-    end
-
     local event = Dispatcher:new()
 
     ledger = Ledger:new(event)
@@ -164,6 +37,134 @@ local main = function ()
     event:hook(PickupPlayerMoney, money.track)
     event:listen()
 
+end
+
+
+Ledger = {
+    name = "Ledger",
+    DEBUG = true,
+    LOG_LEVEL = "TRACE",
+    LOG_COLOR = "",
+    day = 1,
+    Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
+    BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
+    ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
+    PrevButton = nil, NextButton = nil,
+    DayDropdown = nil, MonthDropdown = nil,
+}
+
+function Ledger:new(dispatcher)
+    Ledger.__index = Ledger
+    local instance = {
+        name = self.name,
+        day = self.day,
+        event = dispatcher,
+        LedgerFrame = nil,
+    }
+    setmetatable(instance, Ledger)
+    Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
+    return instance
+end
+
+function Ledger:load(Frame)
+    Debug:trace(self, "load Frame: ", Frame)
+
+    self:UI(Frame)
+end
+
+function Ledger:enable(Frame)
+    Debug:trace(self, "Enable. Frame: ", Frame)
+
+    SLASH_LEDGER1 = "/ledger"
+    SlashCmdList["LEDGER"] = function(msg)
+        Debug:log(self, "/ledger command.")
+    end
+end
+function Ledger:disable()
+end
+local function AddText(text)
+    local numLines = self.ContentFrame.numLines or 0
+    local yOffset = -numLines * 20  -- adjust vertical spacing as needed
+
+    local line = ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    line:SetPoint("TOPLEFT", ContentFrame, "TOPLEFT", 0, yOffset)
+    line:SetText(text)
+    self.event:dispatch("CONTENT_UPDATE")
+end
+function Ledger:ScrollBar_Update()
+    -- Fix the off-by-one error
+    local maxScroll = math.max(0, newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
+    -- Apply new scroll limits
+    self.ScrollBar:SetMinMaxValues(0, maxScroll)
+    -- Hide scrollbar if not needed
+    if maxScroll <= 0 then
+        self.ScrollBar:Hide()
+        self.ScrollBar:SetValue(0)  -- Reset scroll position
+    else
+        self.ScrollBar:Show()
+    end
+end
+function Ledger:Content_Update()
+    self.ContentFrame.numLines = numLines + 1
+    local newHeight = self.ContentFrame.numLines * 20
+    self.ContentFrame:SetHeight(newHeight)
+end
+function Ledger:Update()
+    -- self.Content_Update()
+    -- self.ScrollBar_Update()
+
+    Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
+
+end
+function Ledger:PrevDay(...)
+    Debug:trace(self, "PrevDay: day:", self.day)
+    self.day = self.day - 1
+    if self.day < 1 then
+        self.day = 31  -- Wrap around if going below 1
+    end
+    self.event:dispatch("DATE_CHANGED")
+end
+function Ledger:NextDay(...)
+    Debug:trace(self, "NextDay: day:", self.day)
+    self.day = self.day + 1
+    if self.day > 31 then
+        self.day = 1  -- Wrap around if going above 31
+    end
+    self.event:dispatch("DATE_CHANGED")
+end
+
+
+Money = {
+    name = "Money",
+    money = 0,
+    DEBUG = true,
+    LOG_LEVEL = "TRACE",
+    LOG_COLOR = "39FF14",
+}
+function Money:new()
+    Money.__index = Money
+    local instance = {
+        money = self.money
+    }
+    setmetatable(instance, Money)
+    Debug:trace(Money, "new")
+    return instance
+end
+
+function Money:enable(Frame)
+    self.money = GetMoney()
+    Debug:trace(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
+end
+
+function Money:track(Frame, ...)
+    Debug:trace(self, "args: ", string.unpack(arg))
+    local money = GetMoney()
+    local difference = money - self.money
+    if difference ~= 0 then
+        local action = (difference > 0) and "Gained" or "Lost"
+        print(self, "track ", action, " ", math.abs(difference), " copper")
+    end
+    self.money = money
 end
 
 -- Lua fixes
@@ -438,15 +439,7 @@ function Dispatcher:hook(fn, callback)
 end
 function Dispatcher:on(event, callback)
     local callback_id = id(callback)
-    local target_obj, obj_data
-    
-    for obj, data in pairs(self.objects) do
-        if data.object_map_reversed[callback_id] then
-            target_obj = obj
-            obj_data = data
-            break
-        end
-    end
+    local target_obj, obj_data = self:lookup(callback)
     
     if not target_obj then
         Debug:trace(self, "ERROR: No object found for callback ", callback_id)
@@ -474,17 +467,17 @@ function Dispatcher:dispatch(e)
             if e == "ADDON_LOADED" then
                 if arg1 == obj.name then
                     Debug:trace(self, "dispatch: e: ", e, " event: ", event, " obj: ", obj, " args: ", arg1)
-                    self:_trigger_handlers(obj, obj_data, handlers)
+                    self:trigger(obj, obj_data, handlers)
                 end
             else
                 Debug:trace(self, "dispatch: e: ", e, " event: ", event, " obj: ", obj, " args: ", arg1)
-                self:_trigger_handlers(obj, obj_data, handlers)
+                self:trigger(obj, obj_data, handlers)
             end
         end
     end
 end
 
-function Dispatcher:_trigger_handlers(obj, obj_data, handlers, ...)
+function Dispatcher:trigger(obj, obj_data, handlers, ...)
     for _, callback in ipairs(handlers) do
         local fn_id = id(callback)
         local fn_name = obj_data.object_map_lookup[fn_id] or "unknown"
