@@ -6,15 +6,14 @@ setfenv(1, _G)
 -- Own code
 local Debug
 local Dispatcher, Ledger, Money
-
 local main = function ()
+    local money, ledger
 
     local event = Dispatcher:new()
 
     ledger = Ledger:new(event)
     money = Money:new()
 
-    Debug:trace("Event.add: ", event)
     event:bind(ledger)
     event:bind(money)
 
@@ -157,7 +156,7 @@ function Money:enable(Frame)
 end
 
 function Money:track(Frame, ...)
-    Debug:trace(self, "args: ", string.unpack(arg))
+    Debug:trace(self, "args: ", Debug.unpack(arg))
     local money = GetMoney()
     local difference = money - self.money
     if difference ~= 0 then
@@ -176,22 +175,6 @@ function len(_)
         return table.getn(_)
     end
 end
-
-function string.unpack(_, sep)
-    if type(_) ~= "table" or not table.getn(_) then
-        return
-    end
-    args = {}
-    if not sep then
-        sep = " "
-    end
-    for idx = 1,table.getn(_) do
-        if idx ~= "n" then
-            args[idx] = tostring(_[idx]) .. sep
-        end
-    end  
-    return unpack(args)
-end    
 
 function table.prepend(source, target)
     -- copy of target
@@ -228,6 +211,7 @@ function print(_, ...)
         args = table.prepend({_}, args)
     end
 
+    local value
     for idx = 1,table.getn(args) do
         if idx ~= "n" then
             value = args[idx]
@@ -331,6 +315,22 @@ Debug = {
     TRACE="TRACE",
     LOG_COLOR="ffd700"
 }
+function Debug:unpack(_, sep)
+    if type(_) ~= "table" or not table.getn(_) then
+        return
+    end
+    local args = {}
+    if not sep then
+        sep = " "
+    end
+    for idx = 1,table.getn(_) do
+        if idx ~= "n" then
+            args[idx] = tostring(_[idx]) .. sep
+        end
+    end  
+    return unpack(args)
+end    
+
 function Debug:print(_, level, ...)
     if type(_) == "table" and not _.DEBUG then
         return
@@ -341,6 +341,7 @@ function Debug:print(_, level, ...)
         msg = _
     end
 
+    local color
     if type(_) == "table" and _.name then 
         color = "|cff" .. Debug.LOG_COLOR
         if _.LOG_COLOR and _.LOG_COLOR ~= "" then
