@@ -46,14 +46,13 @@ Ledger = {
     DEBUG = true,
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "",
-    day = 1
 }
 
 function Ledger:new(dispatcher)
     Ledger.__index = Ledger
     local instance = {
         name = self.name,
-        day = self.day,
+        day = 1,
         event = dispatcher,
         LedgerFrame = nil,
         Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
