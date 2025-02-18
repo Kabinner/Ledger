@@ -142,10 +142,10 @@ function Ledger:UI(Frame)
     local days = {1,2,3,4,6,7,9,10,11,15,20,21,22,25,26,27,28}
     local monthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
 
-    LedgerFrame = CreateFrame("Frame", "LedgerFrame", Frame)
+    LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
     LedgerFrame:SetWidth(384)
     LedgerFrame:SetHeight(512)
-    LedgerFrame:SetPoint("TOPRIGHT", Frame, "TOPRIGHT", 0, 0)
+    LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
     LedgerFrame:SetMovable(true)
 
     local function AddLine(text)
