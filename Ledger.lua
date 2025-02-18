@@ -142,8 +142,8 @@ local main = function ()
     money = Money:new()
 
     Debug:trace("Event.add: ", event)
-    event:add(ledger)
-    event:add(money)
+    event:bind(ledger)
+    event:bind(money)
 
     event:on("ADDON_LOADED", ledger.load)
     event:on("PLAYER_LOGIN", ledger.enable)
@@ -383,7 +383,7 @@ function Dispatcher:new()
     return instance
 end
 
-function Dispatcher:add(obj)
+function Dispatcher:bind(obj)
     Debug:trace(self, "add ", obj.name, "[", id(obj), "]")
     
     local obj_data = {
