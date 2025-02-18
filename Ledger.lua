@@ -386,7 +386,7 @@ function Dispatcher:new()
 end
 
 function Dispatcher:bind(obj)
-    Debug:trace(self, "add ", obj.name, "[", id(obj), "]")
+    Debug:trace(self, "bind ", obj.name, "[", id(obj), "]")
     
     local obj_data = {
         object = obj,
@@ -408,7 +408,6 @@ function Dispatcher:bind(obj)
     end
     
     self.objects[obj] = obj_data
-    Debug:trace(self, "added ", obj.name, "[", id(obj), "]")
 end
 
 function Dispatcher:target(callback)
