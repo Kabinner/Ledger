@@ -368,7 +368,7 @@ function Debug:trace(caller, ...)
 end
 function Debug:error(caller, ...)
     local args
-    if type(caller) == "string" then
+    if type(caller) ~= "object" then
         args = table.prepend({caller}, arg)
         caller = {}
     end
