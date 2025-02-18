@@ -144,8 +144,8 @@ local main = function ()
     money = Money:new()
 
     Debug:trace("Event.add: ", event)
-    event:add(ledger)
-    event:add(money)
+    event:bind(ledger)
+    event:bind(money)
 
     event:on("ADDON_LOADED", ledger.load)
     event:on("PLAYER_LOGIN", ledger.enable)
