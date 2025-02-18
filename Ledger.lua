@@ -6,6 +6,7 @@ setfenv(1, _G)
 -- Own code
 local Debug
 local Dispatcher, Ledger, Money
+local Date
 local main = function ()
     local money, ledger
 
@@ -37,29 +38,59 @@ local main = function ()
     event:listen()
 
 end
+local Date = {
+    days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"},
+    months = {
+        January = 31, 
+        February = 28, 
+        March = 31, 
+        April = 30,
+        May = 31,
+        June = 30, 
+        July = 31,
+        August = 31,
+        September = 30,
+        October = 31,
+        November = 30,
+        December = 31
+    },
+}
+function Date:numDaysInMonth(month, year)
+    local numDays = self.months[month] or Debug:error("Month not found.")
 
+    if month == "February" and self:isLeapYear(year) then
+        numDays = numDays + 1
+    end
+    return numDays
+end
+
+function Date:isLeapYear(year)
+    return (math.mod(year, 4) == 0 and (math.mod(year, 100) ~= 0 or math.mod(year, 400) == 0))
+end
 
 Ledger = {
     name = "Ledger",
     DEBUG = true,
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "",
-    day = 1,
-    Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
-    BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
-    ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
-    PrevButton = nil, NextButton = nil,
-    DayDropdown = nil, MonthDropdown = nil,
 }
 
 function Ledger:new(dispatcher)
     Ledger.__index = Ledger
     local instance = {
-        name = self.name,
-        day = self.day,
         event = dispatcher,
-        LedgerFrame = nil,
+        name = self.name,
+
+        day = 1,
+
+        Frame = nil,
+        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
+        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
+        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
+        PrevButton = nil, NextButton = nil,
+        DayDropdown = nil, MonthDropdown = nil,
     }
+
     setmetatable(instance, Ledger)
     Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
     return instance
@@ -68,7 +99,7 @@ end
 function Ledger:load(Frame)
     Debug:trace(self, "load Frame: ", Frame)
 
-    self:UI(Frame)
+    self:CreateFrames(Frame)
 end
 
 function Ledger:enable(Frame)
@@ -81,18 +112,19 @@ function Ledger:enable(Frame)
 end
 function Ledger:disable()
 end
-local function AddText(text)
-    local numLines = self.ContentFrame.numLines or 0
-    local yOffset = -numLines * 20  -- adjust vertical spacing as needed
 
-    local line = ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    line:SetPoint("TOPLEFT", ContentFrame, "TOPLEFT", 0, yOffset)
+function Ledger:AddText(text)
+    local numLines = self.ContentFrame.numLines or 0
+    local yOffset = -self.numLines * 20  -- adjust vertical spacing as needed
+
+    local line = self.ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    line:SetPoint("TOPLEFT", self.ContentFrame, "TOPLEFT", 0, yOffset)
     line:SetText(text)
     self.event:dispatch("CONTENT_UPDATE")
 end
 function Ledger:ScrollBar_Update()
     -- Fix the off-by-one error
-    local maxScroll = math.max(0, newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
+    local maxScroll = math.max(0, self.newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
     -- Apply new scroll limits
     self.ScrollBar:SetMinMaxValues(0, maxScroll)
     -- Hide scrollbar if not needed
@@ -104,7 +136,7 @@ function Ledger:ScrollBar_Update()
     end
 end
 function Ledger:Content_Update()
-    self.ContentFrame.numLines = numLines + 1
+    self.ContentFrame.numLines = self.numLines + 1
     local newHeight = self.ContentFrame.numLines * 20
     self.ContentFrame:SetHeight(newHeight)
 end
@@ -132,6 +164,158 @@ function Ledger:NextDay(...)
     self.event:dispatch("DATE_CHANGED")
 end
 
+-- UI
+function Ledger:CreateFrames()
+    self.LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
+    self.LedgerFrame:SetWidth(384)
+    self.LedgerFrame:SetHeight(512)
+    self.LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
+    self.LedgerFrame:SetMovable(true)
+
+    self.Title = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.Title:SetText("Ledger")
+    self.Title:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 80, -18)
+
+    self.TitleDate = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.TitleDate:SetText("Sunday 16/2")
+    self.TitleDate:SetPoint("TOP", self.Frame, "TOP", -0, -18)
+
+    self.DragTitle = self.Frame:CreateFrame("Frame")
+    self.DragTitle:SetSize(265, 28)
+    self.DragTitle:SetPoint("TOP", self.Frame, "TOP", 5, -10)
+    self.DragTitle:EnableMouse(true)
+    self.DragTitle:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
+    self.DragTitle:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
+    self.DragTitle:Debug()
+
+    self.Icon = self.Frame:Texture('Icon', 'BACKGROUND', 58, 58, [[Interface\Spellbook\Spellbook-Icon]])
+    self.Icon:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 10, -8)
+
+    self.DragIcon = self.Frame:CreateFrame("Frame")
+    self.DragIcon:SetPoint("TOP", Icon, "TOP", 0, 0) 
+    self.DragIcon:SetSize(58, 58) 
+    self.DragIcon:EnableMouse(true)
+    self.DragIcon:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
+    self.DragIcon:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
+    self.DragIcon:Debug()
+
+    self.BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
+    self.BackgroundTL:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 0, 0)
+    self.BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
+    self.BackgroundTR:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", 0, 0)
+    self.BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
+    self.BackgroundBL:SetPoint("BOTTOMLEFT", self.Frame, "BOTTOMLEFT", 0, 0)
+    self.BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
+    self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", 0, 0)
+
+    self.CloseButton = self.Frame:CreateFrame("Button", nil, self.Frame, "UIPanelCloseButton")
+    self.CloseButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -30, -8)
+
+    self.PrevButton = self.Frame:CreateFrame("Button", "PrevDayButton")
+    self.PrevButton:SetSize(28, 28)
+    self.PrevButton:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 91, -40)
+    self.PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
+    self.PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
+    self.PrevButton:SetScript("OnClick", function () 
+        Debug:trace(self, "PrevButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_PREV_ONCLICK") 
+    end)
+
+    self.NextButton = self.Frame:CreateFrame("Button", "NextDayButton")
+    self.NextButton:SetSize(28, 28)
+    self.NextButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -44, -40)
+    self.NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
+    self.NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
+    self.NextButton:SetScript("OnClick", function () 
+        Debug:trace(self, "NextButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_NEXT_ONCLICK") 
+    end)
+
+    -- Dropdown
+    self.DayDropdown = self.Frame:CreateFrame("Frame", "DayDropdown", self.Frame, "UIDropDownMenuTemplate")
+    self.DayDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 100, -40)
+    self.DayDropdown:SetDropdown("Day", 48, days)
+
+    self.MonthDropdown = self.Frame:CreateFrame("Frame", "MonthDropdown", self.Frame, "UIDropDownMenuTemplate")
+    self.MonthDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 180, -40)
+    self.MonthDropdown:SetDropdown("Month", 100, monthNames)
+
+    -- Scroll
+    self.ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
+    self.ScrollContainer:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 22, -80)
+    self.ScrollContainer:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", -65, 80)
+
+    self.ScrollFrame = self.ScrollContainer:CreateFrame("ScrollFrame", "LedgerScrollFrame")
+    self.ScrollFrame:SetAllPoints(self.ScrollContainer)
+    self.ScrollFrame:EnableMouseWheel(true)
+    self.ScrollFrame:SetHeight(0)
+    self.ScrollFrame:SetScript("OnMouseWheel", function()
+        local current = self.ScrollBar:GetValue()
+        local newVal = current - (arg1 * 20)  -- adjust the multiplier for scroll speed
+        if newVal < 0 then
+            newVal = 0
+        end
+        self.ScrollBar:SetValue(newVal)
+    end)
+
+    self.ScrollBar = self.ScrollContainer:CreateFrame("Slider", "LedgerScrollBar", self.ScrollContainer, "UIPanelScrollBarTemplate")
+    self.ScrollBar:SetPoint("TOPLEFT", self.ScrollContainer, "TOPRIGHT", 4, -11)
+    self.ScrollBar:SetPoint("BOTTOMLEFT", self.ScrollContainer, "BOTTOMRIGHT", 4, 19)
+    self.ScrollBar:SetMinMaxValues(1, 200)
+    self.ScrollBar:SetValueStep(1)
+    self.ScrollBar:SetWidth(16)
+    self.ScrollBar:SetScript("OnValueChanged", function()
+        self.ScrollFrame:SetVerticalScroll(arg1)
+    end)
+
+    self.ContentFrame = self.ScrollFrame:CreateFrame("Frame", "LedgerContentFrame")
+    self.ContentFrame:SetWidth(354)
+    self.ContentFrame:SetHeight(0)  -- initial height; expands as lines are added.
+    self.ContentFrame:SetPoint("TOPLEFT", self.ScrollFrame, "TOPRIGHT", 6, -22)
+    self.ContentFrame:SetPoint("BOTTOMLEFT", self.ScrollFrame, "BOTTOMRIGHT", 4, 20)
+    self.ScrollFrame:SetScrollChild(self.ContentFrame)
+    self.ScrollBar:SetValue(0)
+
+    AddLine([[Mail "Test" from Kabinner +30c]])
+    AddLine([[Mail "Test" from Kabinner +1s]])
+    AddLine([[Mail "Test" from Kabinner +50c]])
+    AddLine([[Mail "Test" to Kabgilder -30c]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Third Entry]])
+    AddLine([[Foo Entry]])
+    AddLine([[Last Entry]])
+    Debug:trace(self, "UI: initialized Frame: ", Frame)
+    return LedgerFrame
+end
 
 Money = {
     name = "Money",
@@ -156,7 +340,7 @@ function Money:enable(Frame)
 end
 
 function Money:track(Frame, ...)
-    Debug:trace(self, "args: ", Debug.unpack(arg))
+    Debug:trace(self, "args: ", Debug:unpack(arg))
     local money = GetMoney()
     local difference = money - self.money
     if difference ~= 0 then
@@ -521,177 +705,3 @@ end
 xpcall(main, function (err)
     Debug:error("main: ", err)
 end)
-
--- UI
-function Ledger:UI(Frame)
-    local LedgerFrame
-    local Title, DragTitle, TitleDate, Icon, DragIcon, CloseButton
-    local BackgroundTL, BackgroundTR, BackgroundBL, BackgroundBR
-    local ScrollContainer, ScrollFrame, ScrollBar, ContentFrame
-    local PrevButton, NextButton
-    local DayDropdown, MonthDropdown
-
-    local day, month, year
-    local days = {1,2,3,4,6,7,9,10,11,15,20,21,22,25,26,27,28}
-    local monthNames = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
-
-    LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
-    LedgerFrame:SetWidth(384)
-    LedgerFrame:SetHeight(512)
-    LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
-    LedgerFrame:SetMovable(true)
-
-    local function GetDaysInMonth(month)
-        local daysInMonth = {
-            31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31
-        }
-        return daysInMonth[month]
-    end
-
-
-    Title = LedgerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    Title:SetText("Ledger")
-    Title:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 80, -18)
-
-    TitleDate = LedgerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    TitleDate:SetText("Sunday 16/2")
-    TitleDate:SetPoint("TOP", LedgerFrame, "TOP", -0, -18)
-
-    DragTitle = LedgerFrame:CreateFrame("Frame")
-    DragTitle:SetSize(265, 28)
-    DragTitle:SetPoint("TOP", LedgerFrame, "TOP", 5, -10)
-    DragTitle:EnableMouse(true)
-    DragTitle:SetScript("OnMouseDown", function() LedgerFrame:StartMoving() end)
-    DragTitle:SetScript("OnMouseUp", function() LedgerFrame:StopMovingOrSizing() end)
-    DragTitle:Debug()
-
-    Icon = LedgerFrame:Texture('Icon', 'BACKGROUND', 58, 58, [[Interface\Spellbook\Spellbook-Icon]])
-    Icon:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 10, -8)
-
-    DragIcon = LedgerFrame:CreateFrame("Frame")
-    DragIcon:SetPoint("TOP", Icon, "TOP", 0, 0) 
-    DragIcon:SetSize(58, 58) 
-    DragIcon:EnableMouse(true)
-    DragIcon:SetScript("OnMouseDown", function() LedgerFrame:StartMoving() end)
-    DragIcon:SetScript("OnMouseUp", function() LedgerFrame:StopMovingOrSizing() end)
-    DragIcon:Debug()
-
-    BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
-    BackgroundTL:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 0, 0)
-    BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
-    BackgroundTR:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", 0, 0)
-    BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
-    BackgroundBL:SetPoint("BOTTOMLEFT", LedgerFrame, "BOTTOMLEFT", 0, 0)
-    BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
-    BackgroundBR:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", 0, 0)
-
-    CloseButton = LedgerFrame:CreateFrame("Button", nil, LedgerFrame, "UIPanelCloseButton")
-    CloseButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -30, -8)
-
-    PrevButton = LedgerFrame:CreateFrame("Button", "PrevDayButton")
-    PrevButton:SetSize(28, 28)
-    PrevButton:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 91, -40)
-    PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
-    PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
-    PrevButton:SetScript("OnClick", function () 
-        Debug:trace(self, "PrevButton:SetScript:OnClick")
-        self.event:dispatch("BUTTON_PREV_ONCLICK") 
-    end)
-
-    NextButton = LedgerFrame:CreateFrame("Button", "NextDayButton")
-    NextButton:SetSize(28, 28)
-    NextButton:SetPoint("TOPRIGHT", LedgerFrame, "TOPRIGHT", -44, -40)
-    NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
-    NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
-    NextButton:SetScript("OnClick", function () 
-        Debug:trace(self, "NextButton:SetScript:OnClick")
-        self.event:dispatch("BUTTON_NEXT_ONCLICK") 
-    end)
-
-    -- Dropdown
-    DayDropdown = LedgerFrame:CreateFrame("Frame", "DayDropdown", LedgerFrame, "UIDropDownMenuTemplate")
-    DayDropdown:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 100, -40)
-    DayDropdown:SetDropdown("Day", 48, days)
-
-    MonthDropdown = LedgerFrame:CreateFrame("Frame", "MonthDropdown", LedgerFrame, "UIDropDownMenuTemplate")
-    MonthDropdown:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 180, -40)
-    MonthDropdown:SetDropdown("Month", 100, monthNames)
-
-
-
-    -- Scroll
-    ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
-    ScrollContainer:SetPoint("TOPLEFT", LedgerFrame, "TOPLEFT", 22, -80)
-    ScrollContainer:SetPoint("BOTTOMRIGHT", LedgerFrame, "BOTTOMRIGHT", -65, 80)
-
-    ScrollFrame = ScrollContainer:CreateFrame("ScrollFrame", "LedgerScrollFrame")
-    ScrollFrame:SetAllPoints(ScrollContainer)
-    ScrollFrame:EnableMouseWheel(true)
-    ScrollFrame:SetHeight(0)
-    ScrollFrame:SetScript("OnMouseWheel", function()
-        local current = ScrollBar:GetValue()
-        local newVal = current - (arg1 * 20)  -- adjust the multiplier for scroll speed
-        if newVal < 0 then
-            newVal = 0
-        end
-        ScrollBar:SetValue(newVal)
-    end)
-
-    ScrollBar = ScrollContainer:CreateFrame("Slider", "LedgerScrollBar", ScrollContainer, "UIPanelScrollBarTemplate")
-    ScrollBar:SetPoint("TOPLEFT", ScrollContainer, "TOPRIGHT", 4, -11)
-    ScrollBar:SetPoint("BOTTOMLEFT", ScrollContainer, "BOTTOMRIGHT", 4, 19)
-    ScrollBar:SetMinMaxValues(1, 200)
-    ScrollBar:SetValueStep(1)
-    ScrollBar:SetWidth(16)
-    ScrollBar:SetScript("OnValueChanged", function()
-        ScrollFrame:SetVerticalScroll(arg1)
-    end)
-
-    ContentFrame = ScrollFrame:CreateFrame("Frame", "LedgerContentFrame")
-    ContentFrame:SetWidth(354)
-    ContentFrame:SetHeight(0)  -- initial height; expands as lines are added.
-    ContentFrame:SetPoint("TOPLEFT", ScrollFrame, "TOPRIGHT", 6, -22)
-    ContentFrame:SetPoint("BOTTOMLEFT", ScrollFrame, "BOTTOMRIGHT", 4, 20)
-    ScrollFrame:SetScrollChild(ContentFrame)
-    ScrollBar:SetValue(0)
-
-    AddLine([[Mail "Test" from Kabinner +30c]])
-    AddLine([[Mail "Test" from Kabinner +1s]])
-    AddLine([[Mail "Test" from Kabinner +50c]])
-    AddLine([[Mail "Test" to Kabgilder -30c]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Foo Entry]])
-    AddLine([[Last Entry]])
-    Debug:trace(self, "UI: initialized Frame: ", Frame)
-    return LedgerFrame
-end
