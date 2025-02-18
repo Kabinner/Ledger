@@ -410,10 +410,10 @@ function Dispatcher:bind(obj)
     Debug:trace(self, "added ", obj.name, "[", id(obj), "]")
 end
 
-function Dispatcher:lookup(callback)
+function Dispatcher:obj(callback)
     local callback_id = id(callback)
-    local target_obj
 
+    local target_obj
     for obj, data in pairs(self.objects) do
         if data.object_map_reversed[callback_id] then
             target_obj = obj
@@ -425,7 +425,7 @@ end
 function Dispatcher:hook(fn, callback)
 
     local callback_id = id(callback)
-    local target_obj, obj_data = self:lookup(callback)
+    local target_obj, obj_data = self:obj(callback)
     Debug:trace(self, "hook: ", fn, " -> ", target_obj.name, ":", callback_id)
     
     if not target_obj then
@@ -439,7 +439,7 @@ function Dispatcher:hook(fn, callback)
 end
 function Dispatcher:on(event, callback)
     local callback_id = id(callback)
-    local target_obj, obj_data = self:lookup(callback)
+    local target_obj, obj_data = self:obj(callback)
     
     if not target_obj then
         Debug:trace(self, "ERROR: No object found for callback ", callback_id)
