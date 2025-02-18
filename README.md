@@ -158,7 +158,7 @@ function Money:enable(Frame)
 end
 
 function Money:track(Frame, ...)
-    Debug:trace(self, "args: ", Debug.unpack(arg))
+    Debug:trace(self, "args: ", Debug:unpack(arg))
     local money = GetMoney()
     local difference = money - self.money
     if difference ~= 0 then
