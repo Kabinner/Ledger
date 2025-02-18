@@ -138,7 +138,6 @@ end
 
 Money = {
     name = "Money",
-    money = 0,
     DEBUG = true,
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "39FF14",
@@ -146,7 +145,8 @@ Money = {
 function Money:new()
     Money.__index = Money
     local instance = {
-        money = self.money
+        name = self.name,
+        money = 0,
     }
     setmetatable(instance, Money)
     Debug:trace(Money, "new")
