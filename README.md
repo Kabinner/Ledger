@@ -10,23 +10,30 @@ local Debug
 local Dispatcher, Ledger, Money
 
 local main = function ()
+
     Ledger = {
         name = "Ledger",
         DEBUG = true,
         LOG_LEVEL = "TRACE",
         LOG_COLOR = "",
         day = 1,
+        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
+        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
+        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
+        PrevButton = nil, NextButton = nil,
+        DayDropdown = nil, MonthDropdown = nil,
     }
 
     function Ledger:new(dispatcher)
         Ledger.__index = Ledger
         local instance = {
             name = self.name,
+            day = self.day,
             event = dispatcher,
-            day = self.day
+            LedgerFrame = nil,
         }
         setmetatable(instance, Ledger)
-        Debug:trace(Ledger, "new: ", instance, " Dispatcher", dispatcher)
+        Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
         return instance
     end
 
@@ -46,26 +53,57 @@ local main = function ()
     end
     function Ledger:disable()
     end
+    local function AddText(text)
+        local numLines = self.ContentFrame.numLines or 0
+        local yOffset = -numLines * 20  -- adjust vertical spacing as needed
 
-    function Ledger:UpdateDateDisplay(Frame)
-        Debug:trace(self, " Ledger:UpdateDateDisplay: ", "Current Day: ", self.day)
+        local line = ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        line:SetPoint("TOPLEFT", ContentFrame, "TOPLEFT", 0, yOffset)
+        line:SetText(text)
+        self.event:dispatch("CONTENT_UPDATE")
     end
-    function Ledger:PrevDay(Frame)
-        Debug:trace(self, "Ledger:PrevDay: day:", self.day)
+    function Ledger:ScrollBar_Update()
+        -- Fix the off-by-one error
+        local maxScroll = math.max(0, newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
+        -- Apply new scroll limits
+        self.ScrollBar:SetMinMaxValues(0, maxScroll)
+        -- Hide scrollbar if not needed
+        if maxScroll <= 0 then
+            self.ScrollBar:Hide()
+            self.ScrollBar:SetValue(0)  -- Reset scroll position
+        else
+            self.ScrollBar:Show()
+        end
+    end
+    function Ledger:Content_Update()
+        self.ContentFrame.numLines = numLines + 1
+        local newHeight = self.ContentFrame.numLines * 20
+        self.ContentFrame:SetHeight(newHeight)
+    end
+    function Ledger:Update()
+        -- self.Content_Update()
+        -- self.ScrollBar_Update()
+
+        Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
+
+    end
+    function Ledger:PrevDay(...)
+        Debug:trace(self, "PrevDay: day:", self.day)
         self.day = self.day - 1
         if self.day < 1 then
             self.day = 31  -- Wrap around if going below 1
         end
-        self.event:dispatch("DISPLAY_UPDATE_DAY")
+        self.event:dispatch("DATE_CHANGED")
     end
-    function Ledger:NextDay(Frame)
-        Debug:trace(self, "Ledger:NextDay: day:", self.day)
+    function Ledger:NextDay(...)
+        Debug:trace(self, "NextDay: day:", self.day)
         self.day = self.day + 1
         if self.day > 31 then
             self.day = 1  -- Wrap around if going above 31
         end
-        self.event:dispatch("DISPLAY_UPDATE_DAY")
+        self.event:dispatch("DATE_CHANGED")
     end
+
 
     Money = {
         name = "Money",
@@ -100,31 +138,33 @@ local main = function ()
         self.money = money
     end
 
-    ledgerDispatcher = Dispatcher:new()
-    ledger = Ledger:new(ledgerDispatcher)
-    ledgerDispatcher:init(ledger)
-    ledgerDispatcher:on("ADDON_LOADED", ledger.load)
-    ledgerDispatcher:on("PLAYER_LOGIN", ledger.enable)
-    ledgerDispatcher:on("PLAYER_LOGOUT", ledger.disable)
-    ledgerDispatcher:on("DISPLAY_UPDATE_DAY", ledger.UpdateDateDisplay)
-    ledgerDispatcher:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
-    ledgerDispatcher:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
-    ledgerDispatcher:listen()
+    local event = Dispatcher:new()
 
-
-    moneyDispatcher = Dispatcher:new()
+    ledger = Ledger:new(event)
     money = Money:new()
-    moneyDispatcher:init(money)
-    moneyDispatcher:on("PLAYER_LOGIN", money.enable)
-    moneyDispatcher:on("PLAYER_MONEY", money.track)
-    moneyDispatcher:hook("RepairAllItems", money.track)
-    moneyDispatcher:hook("UseContainerItem", money.track)
-    moneyDispatcher:hook("PickupMerchantItem", money.track)
-    moneyDispatcher:hook("SendMail", money.track)
-    moneyDispatcher:hook("PlaceAuctionBid", money.track)
-    moneyDispatcher:hook("PickupPlayerMoney", money.track)
-    moneyDispatcher:listen()
 
+    Debug:trace("Event.add: ", event)
+    event:add(ledger)
+    event:add(money)
+
+    event:on("ADDON_LOADED", ledger.load)
+    event:on("PLAYER_LOGIN", ledger.enable)
+    event:on("PLAYER_LOGOUT", ledger.disable)
+    event:on("PLAYER_LOGIN", money.enable)
+
+    event:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
+    event:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
+    event:on("DATE_CHANGED", ledger.Update)
+
+    event:on("PLAYER_MONEY", money.track)
+
+    event:hook(RepairAllItems, money.track)
+    event:hook(UseContainerItem, money.track)
+    event:hook(PickupMerchantItem, money.track)
+    event:hook(SendMail, money.track)
+    event:hook(PlaceAuctionBid, money.track)
+    event:hook(PickupPlayerMoney, money.track)
+    event:listen()
 end
 
 main()
