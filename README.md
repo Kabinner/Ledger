@@ -46,12 +46,7 @@ Ledger = {
     DEBUG = true,
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "",
-    day = 1,
-    Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
-    BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
-    ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
-    PrevButton = nil, NextButton = nil,
-    DayDropdown = nil, MonthDropdown = nil,
+    day = 1
 }
 
 function Ledger:new(dispatcher)
@@ -61,6 +56,11 @@ function Ledger:new(dispatcher)
         day = self.day,
         event = dispatcher,
         LedgerFrame = nil,
+        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
+        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
+        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
+        PrevButton = nil, NextButton = nil,
+        DayDropdown = nil, MonthDropdown = nil,
     }
     setmetatable(instance, Ledger)
     Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
