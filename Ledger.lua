@@ -367,8 +367,13 @@ function Debug:trace(caller, ...)
     self:print(caller, Debug.TRACE, unpack(arg))
 end
 function Debug:error(caller, ...)
+    local args
+    if type(caller) == "string" then
+        args = table.prepend({caller}, arg)
+        caller = {}
+    end
     caller.DEBUG_COLOR = "FF2400"
-    self:print(caller, Debug.ERROR, unpack(arg))
+    self:print(caller, Debug.ERROR, unpack(args))
 end
 
 
