@@ -373,6 +373,7 @@ function Debug:error(caller, ...)
         caller = {}
     end
     caller.DEBUG_COLOR = "FF2400"
+    caller.DEBUG = true
     self:print(caller, Debug.ERROR, unpack(args))
 end
 
