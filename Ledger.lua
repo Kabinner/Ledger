@@ -337,20 +337,23 @@ function Debug:print(_, level, ...)
         return
     end
 
-    local msg = ""
-    if type(_) == "string" then
-        msg = _
-    end
-
     local color
-    if type(_) == "table" and _.name then 
-        color = "|cff" .. Debug.LOG_COLOR
-        if _.LOG_COLOR and _.LOG_COLOR ~= "" then
-            color = "|cff" .. _.LOG_COLOR
-        end
-
-        msg =  color .. "[".. level .."] ".. _.name .."[" .. id(_) .."]:"
+    color = "|cff" .. Debug.LOG_COLOR
+    if _.LOG_COLOR and _.LOG_COLOR ~= "" then
+        color = "|cff" .. _.LOG_COLOR
     end
+
+    local msg = color
+
+    if type(_) == "string" then
+        msg = msg .. _
+    end
+    
+    msg = msg .. "[".. level .."] "
+    if type(_) == "table" and _.name then 
+        msg = msg .. _.name .."[" .. id(_) .."]:"
+    end
+    
     print(msg, unpack(arg))
 
 end
@@ -511,7 +514,7 @@ end
 
 
 xpcall(main, function (err)
-    Debug:error(self, "main ", err)
+    Debug:error("main: ", err)
 end)
 
 -- UI
