@@ -365,7 +365,7 @@ function Debug:trace(caller, ...)
     self:print(caller, Debug.TRACE, unpack(arg))
 end
 function Debug:error(caller, ...)
-    caller.color = "FF2400"
+    caller.DEBUG_COLOR = "FF2400"
     self:print(caller, Debug.ERROR, unpack(arg))
 end
 
