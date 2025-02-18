@@ -52,8 +52,10 @@ function Ledger:new(dispatcher)
     Ledger.__index = Ledger
     local instance = {
         name = self.name,
-        day = 1,
         event = dispatcher,
+
+        day = 1,
+
         LedgerFrame = nil,
         Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
         BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
