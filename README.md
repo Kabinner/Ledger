@@ -46,21 +46,22 @@ Ledger = {
     DEBUG = true,
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "",
-    day = 1,
-    Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
-    BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
-    ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
-    PrevButton = nil, NextButton = nil,
-    DayDropdown = nil, MonthDropdown = nil,
 }
 
 function Ledger:new(dispatcher)
     Ledger.__index = Ledger
     local instance = {
         name = self.name,
-        day = self.day,
         event = dispatcher,
+
+        day = 1,
+
         LedgerFrame = nil,
+        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
+        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
+        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
+        PrevButton = nil, NextButton = nil,
+        DayDropdown = nil, MonthDropdown = nil,
     }
     setmetatable(instance, Ledger)
     Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
@@ -137,7 +138,6 @@ end
 
 Money = {
     name = "Money",
-    money = 0,
     DEBUG = true,
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "39FF14",
@@ -145,7 +145,8 @@ Money = {
 function Money:new()
     Money.__index = Money
     local instance = {
-        money = self.money
+        name = self.name,
+        money = 0,
     }
     setmetatable(instance, Money)
     Debug:trace(Money, "new")
@@ -158,7 +159,7 @@ function Money:enable(Frame)
 end
 
 function Money:track(Frame, ...)
-    Debug:trace(self, "args: ", Debug.unpack(arg))
+    Debug:trace(self, "args: ", Debug:unpack(arg))
     local money = GetMoney()
     local difference = money - self.money
     if difference ~= 0 then
