@@ -8,6 +8,7 @@ local Debug
 local Dispatcher, Ledger, Money
 local Date
 local LedgerDB
+
 local main = function ()
     local money, ledger
 
@@ -19,10 +20,13 @@ local main = function ()
     event:bind(ledger)
     event:bind(money)
 
-    event:on("ADDON_LOADED", ledger.load)
+
+    event:on("PLAYER_LOGIN", money.enable)
     event:on("PLAYER_LOGIN", ledger.enable)
     event:on("PLAYER_LOGOUT", ledger.disable)
-    event:on("PLAYER_LOGIN", money.enable)
+
+    event:on("ADDON_LOADED", ledger.init_db)
+    event:on("ADDON_LOADED", ledger.CreateFrames)
 
     event:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
     event:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
@@ -37,8 +41,41 @@ local main = function ()
     event:hook(PlaceAuctionBid, money.track)
     event:hook(PickupPlayerMoney, money.track)
     event:listen()
-
 end
+
+Money = {
+    name = "Money",
+    money = 0,
+    DEBUG = true,
+    LOG_LEVEL = "TRACE",
+    LOG_COLOR = "39FF14",
+}
+function Money:new()
+    Money.__index = Money
+    local instance = {
+        money = self.money
+    }
+    setmetatable(instance, Money)
+    Debug:trace(Money, "new")
+    return instance
+end
+
+function Money:enable(Frame)
+    self.money = GetMoney()
+    Debug:trace(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
+end
+
+function Money:track(Frame, ...)
+    Debug:trace(self, "args: ", Debug:unpack(arg))
+    local money = GetMoney()
+    local difference = money - self.money
+    if difference ~= 0 then
+        local action = (difference > 0) and "Gained" or "Lost"
+        print(self, "track ", action, " ", math.abs(difference), " copper")
+    end
+    self.money = money
+end
+
 
 Ledger = {
     name = "Ledger",
@@ -46,129 +83,6 @@ Ledger = {
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "",
 }
-
-function Ledger:CreateWindow()
-    self.LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
-    self.LedgerFrame:SetWidth(384)
-    self.LedgerFrame:SetHeight(512)
-    self.LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
-    self.LedgerFrame:SetMovable(true)
-
-    self.BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
-    self.BackgroundTL:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 0, 0)
-    self.BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
-    self.BackgroundTR:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", 0, 0)
-    self.BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
-    self.BackgroundBL:SetPoint("BOTTOMLEFT", self.Frame, "BOTTOMLEFT", 0, 0)
-    self.BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
-    self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", 0, 0)
-
-    self.CloseButton = self.Frame:CreateFrame("Button", nil, self.Frame, "UIPanelCloseButton")
-    self.CloseButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -30, -8)
-
-    self.Title = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    self.Title:SetText("Ledger")
-    self.Title:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 80, -18)
-
-    self.TitleDate = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    self.TitleDate:SetText("Sunday 16/2")
-    self.TitleDate:SetPoint("TOP", self.Frame, "TOP", -0, -18)
-
-    self.DragTitle = self.Frame:CreateFrame("Frame")
-    self.DragTitle:SetSize(265, 28)
-    self.DragTitle:SetPoint("TOP", self.Frame, "TOP", 5, -10)
-    self.DragTitle:EnableMouse(true)
-    self.DragTitle:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
-    self.DragTitle:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
-    self.DragTitle:Debug()
-
-    self.Icon = self.Frame:Texture('Icon', 'BACKGROUND', 58, 58, [[Interface\Spellbook\Spellbook-Icon]])
-    self.Icon:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 10, -8)
-
-    self.DragIcon = self.Frame:CreateFrame("Frame")
-    self.DragIcon:SetPoint("TOP", Icon, "TOP", 0, 0) 
-    self.DragIcon:SetSize(58, 58) 
-    self.DragIcon:EnableMouse(true)
-    self.DragIcon:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
-    self.DragIcon:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
-    self.DragIcon:Debug()
-end
-
-function Ledger:CreateNavigation()
-    self.PrevButton = self.Frame:CreateFrame("Button", "PrevDayButton")
-    self.PrevButton:SetSize(28, 28)
-    self.PrevButton:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 91, -40)
-    self.PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
-    self.PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
-    self.PrevButton:SetScript("OnClick", function () 
-        Debug:trace(self, "PrevButton:SetScript:OnClick")
-        self.event:dispatch("BUTTON_PREV_ONCLICK") 
-    end)
-
-    self.NextButton = self.Frame:CreateFrame("Button", "NextDayButton")
-    self.NextButton:SetSize(28, 28)
-    self.NextButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -44, -40)
-    self.NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
-    self.NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
-    self.NextButton:SetScript("OnClick", function () 
-        Debug:trace(self, "NextButton:SetScript:OnClick")
-        self.event:dispatch("BUTTON_NEXT_ONCLICK") 
-    end)
-
-    self.DayDropdown = self.Frame:CreateFrame("Frame", "DayDropdown", self.Frame, "UIDropDownMenuTemplate")
-    self.DayDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 100, -40)
-    self.DayDropdown:SetDropdown("Day", 48, Date:getDays(self.year))
-
-    self.MonthDropdown = self.Frame:CreateFrame("Frame", "MonthDropdown", self.Frame, "UIDropDownMenuTemplate")
-    self.MonthDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 180, -40)
-    self.MonthDropdown:SetDropdown("Month", 100, Date:getMonthNames())
-end
-function Ledger:CreateScrollContainer()
-    self.ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
-    self.ScrollContainer:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 22, -80)
-    self.ScrollContainer:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", -65, 80)
-
-    self.ScrollFrame = self.ScrollContainer:CreateFrame("ScrollFrame", "LedgerScrollFrame")
-    self.ScrollFrame:SetAllPoints(self.ScrollContainer)
-    self.ScrollFrame:EnableMouseWheel(true)
-    self.ScrollFrame:SetHeight(0)
-    self.ScrollFrame:SetScript("OnMouseWheel", function()
-        local current = self.ScrollBar:GetValue()
-        local newVal = current - (arg1 * 20)  -- adjust the multiplier for scroll speed
-        if newVal < 0 then
-            newVal = 0
-        end
-        self.ScrollBar:SetValue(newVal)
-    end)
-
-    self.ScrollBar = self.ScrollContainer:CreateFrame("Slider", "LedgerScrollBar", self.ScrollContainer, "UIPanelScrollBarTemplate")
-    self.ScrollBar:SetPoint("TOPLEFT", self.ScrollContainer, "TOPRIGHT", 4, -11)
-    self.ScrollBar:SetPoint("BOTTOMLEFT", self.ScrollContainer, "BOTTOMRIGHT", 4, 19)
-    self.ScrollBar:SetMinMaxValues(1, 200)
-    self.ScrollBar:SetValueStep(1)
-    self.ScrollBar:SetWidth(16)
-    self.ScrollBar:SetScript("OnValueChanged", function()
-        self.ScrollFrame:SetVerticalScroll(arg1)
-    end)
-
-    self.ContentFrame = self.ScrollFrame:CreateFrame("Frame", "LedgerContentFrame")
-    self.ContentFrame:SetWidth(354)
-    self.ContentFrame:SetHeight(0)  -- initial height; expands as lines are added.
-    self.ContentFrame:SetPoint("TOPLEFT", self.ScrollFrame, "TOPRIGHT", 6, -22)
-    self.ContentFrame:SetPoint("BOTTOMLEFT", self.ScrollFrame, "BOTTOMRIGHT", 4, 20)
-    self.ScrollFrame:SetScrollChild(self.ContentFrame)
-    self.ScrollBar:SetValue(0)
-end
-
-function Ledger:AddText(text)
-    local numLines = self.ContentFrame.numLines or 0
-    local yOffset = -self.numLines * 20  -- adjust vertical spacing as needed
-
-    local line = self.ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    line:SetPoint("TOPLEFT", self.ContentFrame, "TOPLEFT", 0, yOffset)
-    line:SetText(text)
-    self.event:dispatch("CONTENT_UPDATE")
-end
 
 function Ledger:new(dispatcher)
     Ledger.__index = Ledger
@@ -195,10 +109,8 @@ function Ledger:new(dispatcher)
     return instance
 end
 
-function Ledger:load(Frame)
+function Ledger:initDB(Frame)
     Debug:trace(self, "load Frame: ", Frame)
-
-    self:CreateFrames(Frame)
 
     if not LedgerDB then
         LedgerDB = {}
@@ -259,45 +171,138 @@ function Ledger:NextDay(...)
     self.event:dispatch("DATE_CHANGED")
 end
 
--- UI
+
 function Ledger:CreateFrames()
+    self.LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
+    self.LedgerFrame:SetWidth(384)
+    self.LedgerFrame:SetHeight(512)
+    self.LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
+    self.LedgerFrame:SetMovable(true)
 
-    Debug:trace(self, "UI: initialized Frame: ", Frame)
-    return LedgerFrame
+    self.BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
+    self.BackgroundTL:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 0, 0)
+    self.BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
+    self.BackgroundTR:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", 0, 0)
+    self.BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
+    self.BackgroundBL:SetPoint("BOTTOMLEFT", self.Frame, "BOTTOMLEFT", 0, 0)
+    self.BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
+    self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", 0, 0)
+
+    self.CloseButton = self.Frame:CreateFrame("Button", nil, self.Frame, "UIPanelCloseButton")
+    self.CloseButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -30, -8)
+
+    self.Title = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.Title:SetText("Ledger")
+    self.Title:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 80, -18)
+
+    self.TitleDate = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.TitleDate:SetText("Sunday 16/2")
+    self.TitleDate:SetPoint("TOP", self.Frame, "TOP", -0, -18)
+
+    self.DragTitle = self.Frame:CreateFrame("Frame")
+    self.DragTitle:SetSize(265, 28)
+    self.DragTitle:SetPoint("TOP", self.Frame, "TOP", 5, -10)
+    self.DragTitle:EnableMouse(true)
+    self.DragTitle:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
+    self.DragTitle:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
+    self.DragTitle:Debug()
+
+    self.Icon = self.Frame:Texture('Icon', 'BACKGROUND', 58, 58, [[Interface\Spellbook\Spellbook-Icon]])
+    self.Icon:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 10, -8)
+
+    self.DragIcon = self.Frame:CreateFrame("Frame")
+    self.DragIcon:SetPoint("TOP", Icon, "TOP", 0, 0) 
+    self.DragIcon:SetSize(58, 58) 
+    self.DragIcon:EnableMouse(true)
+    self.DragIcon:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
+    self.DragIcon:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
+    self.DragIcon:Debug()
+
+    self.CreateNavigation()
+    self.CreateScrollContainer()
 end
 
-Money = {
-    name = "Money",
-    money = 0,
-    DEBUG = true,
-    LOG_LEVEL = "TRACE",
-    LOG_COLOR = "39FF14",
-}
-function Money:new()
-    Money.__index = Money
-    local instance = {
-        money = self.money
-    }
-    setmetatable(instance, Money)
-    Debug:trace(Money, "new")
-    return instance
+function Ledger:CreateNavigation()
+    self.PrevButton = self.Frame:CreateFrame("Button", "PrevDayButton")
+    self.PrevButton:SetSize(28, 28)
+    self.PrevButton:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 91, -40)
+    self.PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
+    self.PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
+
+    self.NextButton = self.Frame:CreateFrame("Button", "NextDayButton")
+    self.NextButton:SetSize(28, 28)
+    self.NextButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -44, -40)
+    self.NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
+    self.NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
+
+    self.DayDropdown = self.Frame:CreateFrame("Frame", "DayDropdown", self.Frame, "UIDropDownMenuTemplate")
+    self.DayDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 100, -40)
+
+    self.MonthDropdown = self.Frame:CreateFrame("Frame", "MonthDropdown", self.Frame, "UIDropDownMenuTemplate")
+    self.MonthDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 180, -40)
+
+
+    self.DayDropdown:SetDropdown("Day", 48, Date:getDays(self.year))
+    self.MonthDropdown:SetDropdown("Month", 100, Date:getMonthNames())
+
+    self.NextButton:SetScript("OnClick", function () 
+        Debug:trace(self, "NextButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_NEXT_ONCLICK") 
+    end)
+
+    self.PrevButton:SetScript("OnClick", function () 
+        Debug:trace(self, "PrevButton:SetScript:OnClick")
+        self.event:dispatch("BUTTON_PREV_ONCLICK") 
+    end)
+
+end
+function Ledger:CreateScrollContainer()
+    self.ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
+    self.ScrollContainer:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 22, -80)
+    self.ScrollContainer:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", -65, 80)
+
+    self.ScrollFrame = self.ScrollContainer:CreateFrame("ScrollFrame", "LedgerScrollFrame")
+    self.ScrollFrame:SetAllPoints(self.ScrollContainer)
+    self.ScrollFrame:EnableMouseWheel(true)
+    self.ScrollFrame:SetHeight(0)
+
+    self.ScrollBar = self.ScrollContainer:CreateFrame("Slider", "LedgerScrollBar", self.ScrollContainer, "UIPanelScrollBarTemplate")
+    self.ScrollBar:SetPoint("TOPLEFT", self.ScrollContainer, "TOPRIGHT", 4, -11)
+    self.ScrollBar:SetPoint("BOTTOMLEFT", self.ScrollContainer, "BOTTOMRIGHT", 4, 19)
+    self.ScrollBar:SetMinMaxValues(1, 200)
+    self.ScrollBar:SetValueStep(1)
+    self.ScrollBar:SetWidth(16)
+    self.ScrollBar:SetScript("OnValueChanged", function() self.ScrollFrame:SetVerticalScroll(arg1) end)
+
+    self.ContentFrame = self.ScrollFrame:CreateFrame("Frame", "LedgerContentFrame")
+    self.ContentFrame:SetWidth(354)
+    self.ContentFrame:SetHeight(0)  -- initial height; expands as lines are added.
+    self.ContentFrame:SetPoint("TOPLEFT", self.ScrollFrame, "TOPRIGHT", 6, -22)
+    self.ContentFrame:SetPoint("BOTTOMLEFT", self.ScrollFrame, "BOTTOMRIGHT", 4, 20)
+    self.ScrollFrame:SetScrollChild(self.ContentFrame)
+    self.ScrollBar:SetValue(0)
+
+    self.ScrollFrame:SetScript("OnMouseWheel", function()
+        local current = self.ScrollBar:GetValue()
+        local newVal = current - (arg1 * 20)  -- adjust the multiplier for scroll speed
+        if newVal < 0 then
+            newVal = 0
+        end
+        self.ScrollBar:SetValue(newVal)
+    end)
+
 end
 
-function Money:enable(Frame)
-    self.money = GetMoney()
-    Debug:trace(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
+function Ledger:AddText(text)
+    local numLines = self.ContentFrame.numLines or 0
+    local yOffset = -self.numLines * 20  -- adjust vertical spacing as needed
+
+    local line = self.ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    line:SetPoint("TOPLEFT", self.ContentFrame, "TOPLEFT", 0, yOffset)
+    line:SetText(text)
+    self.event:dispatch("CONTENT_UPDATE")
 end
 
-function Money:track(Frame, ...)
-    Debug:trace(self, "args: ", Debug:unpack(arg))
-    local money = GetMoney()
-    local difference = money - self.money
-    if difference ~= 0 then
-        local action = (difference > 0) and "Gained" or "Lost"
-        print(self, "track ", action, " ", math.abs(difference), " copper")
-    end
-    self.money = money
-end
 
 local Date = {
     days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"},
@@ -333,7 +338,6 @@ end
 function Date:isLeapYear(year)
     return (math.mod(year, 4) == 0 and (math.mod(year, 100) ~= 0 or math.mod(year, 400) == 0))
 end
-
 
 -- Lua fixes
 function id(_)
