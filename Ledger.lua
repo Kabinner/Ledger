@@ -129,6 +129,16 @@ function Ledger:disable()
 end
 
 
+
+function Ledger:AddText(text)
+    local numLines = self.ContentFrame.numLines or 0
+    local yOffset = -self.numLines * 20  -- adjust vertical spacing as needed
+
+    local line = self.ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    line:SetPoint("TOPLEFT", self.ContentFrame, "TOPLEFT", 0, yOffset)
+    line:SetText(text)
+    self.event:dispatch("CONTENT_UPDATE")
+end
 function Ledger:ScrollBar_Update()
     -- Fix the off-by-one error
     local maxScroll = math.max(0, self.newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
@@ -291,16 +301,6 @@ function Ledger:CreateScrollContainer()
         self.ScrollBar:SetValue(newVal)
     end)
 
-end
-
-function Ledger:AddText(text)
-    local numLines = self.ContentFrame.numLines or 0
-    local yOffset = -self.numLines * 20  -- adjust vertical spacing as needed
-
-    local line = self.ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    line:SetPoint("TOPLEFT", self.ContentFrame, "TOPLEFT", 0, yOffset)
-    line:SetText(text)
-    self.event:dispatch("CONTENT_UPDATE")
 end
 
 
