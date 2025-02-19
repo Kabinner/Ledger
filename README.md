@@ -117,7 +117,7 @@ function Ledger:new(dispatcher)
     return instance
 end
 
-function Ledger:initDB(Frame)
+function Ledger:init_db(Frame)
     Debug:trace(self, "load Frame: ", Frame)
 
     if not LedgerDB then
