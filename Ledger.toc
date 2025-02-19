@@ -3,4 +3,5 @@
 ## Author: Kabinner
 ## Notes: Ledger
 ## Version: GIT
+## SavedVariables LedgerDB
 Ledger.lua

@@ -7,6 +7,7 @@ setfenv(1, _G)
 local Debug
 local Dispatcher, Ledger, Money
 local Date
+local LedgerDB
 local main = function ()
     local money, ledger
 
@@ -38,35 +39,6 @@ local main = function ()
     event:listen()
 
 end
-local Date = {
-    days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"},
-    months = {
-        January = 31, 
-        February = 28, 
-        March = 31, 
-        April = 30,
-        May = 31,
-        June = 30, 
-        July = 31,
-        August = 31,
-        September = 30,
-        October = 31,
-        November = 30,
-        December = 31
-    },
-}
-function Date:numDaysInMonth(month, year)
-    local numDays = self.months[month] or Debug:error("Month not found.")
-
-    if month == "February" and self:isLeapYear(year) then
-        numDays = numDays + 1
-    end
-    return numDays
-end
-
-function Date:isLeapYear(year)
-    return (math.mod(year, 4) == 0 and (math.mod(year, 100) ~= 0 or math.mod(year, 400) == 0))
-end
 
 Ledger = {
     name = "Ledger",
@@ -75,102 +47,24 @@ Ledger = {
     LOG_COLOR = "",
 }
 
-function Ledger:new(dispatcher)
-    Ledger.__index = Ledger
-    local instance = {
-        event = dispatcher,
-        name = self.name,
-
-        day = 1,
-
-        Frame = nil,
-        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
-        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
-        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
-        PrevButton = nil, NextButton = nil,
-        DayDropdown = nil, MonthDropdown = nil,
-    }
-
-    setmetatable(instance, Ledger)
-    Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
-    return instance
-end
-
-function Ledger:load(Frame)
-    Debug:trace(self, "load Frame: ", Frame)
-
-    self:CreateFrames(Frame)
-end
-
-function Ledger:enable(Frame)
-    Debug:trace(self, "Enable. Frame: ", Frame)
-
-    SLASH_LEDGER1 = "/ledger"
-    SlashCmdList["LEDGER"] = function(msg)
-        Debug:log(self, "/ledger command.")
-    end
-end
-function Ledger:disable()
-end
-
-function Ledger:AddText(text)
-    local numLines = self.ContentFrame.numLines or 0
-    local yOffset = -self.numLines * 20  -- adjust vertical spacing as needed
-
-    local line = self.ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    line:SetPoint("TOPLEFT", self.ContentFrame, "TOPLEFT", 0, yOffset)
-    line:SetText(text)
-    self.event:dispatch("CONTENT_UPDATE")
-end
-function Ledger:ScrollBar_Update()
-    -- Fix the off-by-one error
-    local maxScroll = math.max(0, self.newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
-    -- Apply new scroll limits
-    self.ScrollBar:SetMinMaxValues(0, maxScroll)
-    -- Hide scrollbar if not needed
-    if maxScroll <= 0 then
-        self.ScrollBar:Hide()
-        self.ScrollBar:SetValue(0)  -- Reset scroll position
-    else
-        self.ScrollBar:Show()
-    end
-end
-function Ledger:Content_Update()
-    self.ContentFrame.numLines = self.numLines + 1
-    local newHeight = self.ContentFrame.numLines * 20
-    self.ContentFrame:SetHeight(newHeight)
-end
-function Ledger:Update()
-    -- self.Content_Update()
-    -- self.ScrollBar_Update()
-
-    Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
-
-end
-function Ledger:PrevDay(...)
-    Debug:trace(self, "PrevDay: day:", self.day)
-    self.day = self.day - 1
-    if self.day < 1 then
-        self.day = 31  -- Wrap around if going below 1
-    end
-    self.event:dispatch("DATE_CHANGED")
-end
-function Ledger:NextDay(...)
-    Debug:trace(self, "NextDay: day:", self.day)
-    self.day = self.day + 1
-    if self.day > 31 then
-        self.day = 1  -- Wrap around if going above 31
-    end
-    self.event:dispatch("DATE_CHANGED")
-end
-
--- UI
-function Ledger:CreateFrames()
+function Ledger:CreateWindow()
     self.LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
     self.LedgerFrame:SetWidth(384)
     self.LedgerFrame:SetHeight(512)
     self.LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
     self.LedgerFrame:SetMovable(true)
+
+    self.BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
+    self.BackgroundTL:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 0, 0)
+    self.BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
+    self.BackgroundTR:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", 0, 0)
+    self.BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
+    self.BackgroundBL:SetPoint("BOTTOMLEFT", self.Frame, "BOTTOMLEFT", 0, 0)
+    self.BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
+    self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", 0, 0)
+
+    self.CloseButton = self.Frame:CreateFrame("Button", nil, self.Frame, "UIPanelCloseButton")
+    self.CloseButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -30, -8)
 
     self.Title = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     self.Title:SetText("Ledger")
@@ -198,19 +92,9 @@ function Ledger:CreateFrames()
     self.DragIcon:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
     self.DragIcon:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
     self.DragIcon:Debug()
+end
 
-    self.BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
-    self.BackgroundTL:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 0, 0)
-    self.BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
-    self.BackgroundTR:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", 0, 0)
-    self.BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
-    self.BackgroundBL:SetPoint("BOTTOMLEFT", self.Frame, "BOTTOMLEFT", 0, 0)
-    self.BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
-    self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", 0, 0)
-
-    self.CloseButton = self.Frame:CreateFrame("Button", nil, self.Frame, "UIPanelCloseButton")
-    self.CloseButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -30, -8)
-
+function Ledger:CreateNavigation()
     self.PrevButton = self.Frame:CreateFrame("Button", "PrevDayButton")
     self.PrevButton:SetSize(28, 28)
     self.PrevButton:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 91, -40)
@@ -231,16 +115,15 @@ function Ledger:CreateFrames()
         self.event:dispatch("BUTTON_NEXT_ONCLICK") 
     end)
 
-    -- Dropdown
     self.DayDropdown = self.Frame:CreateFrame("Frame", "DayDropdown", self.Frame, "UIDropDownMenuTemplate")
     self.DayDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 100, -40)
-    self.DayDropdown:SetDropdown("Day", 48, days)
+    self.DayDropdown:SetDropdown("Day", 48, Date:getDays(self.year))
 
     self.MonthDropdown = self.Frame:CreateFrame("Frame", "MonthDropdown", self.Frame, "UIDropDownMenuTemplate")
     self.MonthDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 180, -40)
-    self.MonthDropdown:SetDropdown("Month", 100, monthNames)
-
-    -- Scroll
+    self.MonthDropdown:SetDropdown("Month", 100, Date:getMonthNames())
+end
+function Ledger:CreateScrollContainer()
     self.ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
     self.ScrollContainer:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 22, -80)
     self.ScrollContainer:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", -65, 80)
@@ -275,44 +158,110 @@ function Ledger:CreateFrames()
     self.ContentFrame:SetPoint("BOTTOMLEFT", self.ScrollFrame, "BOTTOMRIGHT", 4, 20)
     self.ScrollFrame:SetScrollChild(self.ContentFrame)
     self.ScrollBar:SetValue(0)
+end
 
-    AddLine([[Mail "Test" from Kabinner +30c]])
-    AddLine([[Mail "Test" from Kabinner +1s]])
-    AddLine([[Mail "Test" from Kabinner +50c]])
-    AddLine([[Mail "Test" to Kabgilder -30c]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Third Entry]])
-    AddLine([[Foo Entry]])
-    AddLine([[Last Entry]])
+function Ledger:AddText(text)
+    local numLines = self.ContentFrame.numLines or 0
+    local yOffset = -self.numLines * 20  -- adjust vertical spacing as needed
+
+    local line = self.ContentFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    line:SetPoint("TOPLEFT", self.ContentFrame, "TOPLEFT", 0, yOffset)
+    line:SetText(text)
+    self.event:dispatch("CONTENT_UPDATE")
+end
+
+function Ledger:new(dispatcher)
+    Ledger.__index = Ledger
+    local instance = {
+        event = dispatcher,
+        name = self.name,
+
+        day = Date:getDay(),
+        month = Date:getMonth(),
+        year = Date:getYear(),
+
+        Frame = nil,
+        Title = nil, DragTitle = nil, TitleDate = nil, Icon = nil, DragIcon = nil, CloseButton = nil,
+        BackgroundTL = nil, BackgroundTR = nil, BackgroundBL = nil, BackgroundBR = nil,
+
+        ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
+
+        PrevButton = nil, NextButton = nil,
+        DayDropdown = nil, MonthDropdown = nil,
+    }
+
+    setmetatable(instance, Ledger)
+    Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
+    return instance
+end
+
+function Ledger:load(Frame)
+    Debug:trace(self, "load Frame: ", Frame)
+
+    self:CreateFrames(Frame)
+
+    if not LedgerDB then
+        LedgerDB = {}
+    end
+end
+
+function Ledger:enable(Frame)
+    Debug:trace(self, "Enable. Frame: ", Frame)
+
+    SLASH_LEDGER1 = "/ledger"
+    SlashCmdList["LEDGER"] = function(msg)
+        Debug:log(self, "/ledger command.")
+    end
+end
+function Ledger:disable()
+end
+
+
+function Ledger:ScrollBar_Update()
+    -- Fix the off-by-one error
+    local maxScroll = math.max(0, self.newHeight - self.ScrollFrame:GetHeight() - 350) -- @todo: magic number "350"?? prevents overscroll
+    -- Apply new scroll limits
+    self.ScrollBar:SetMinMaxValues(0, maxScroll)
+    -- Hide scrollbar if not needed
+    if maxScroll <= 0 then
+        self.ScrollBar:Hide()
+        self.ScrollBar:SetValue(0)  -- Reset scroll position
+    else
+        self.ScrollBar:Show()
+    end
+end
+function Ledger:Content_Update()
+    self.ContentFrame.numLines = self.numLines + 1
+    local newHeight = self.ContentFrame.numLines * 20
+    self.ContentFrame:SetHeight(newHeight)
+end
+function Ledger:Update()
+    -- self.Content_Update()
+    -- self.ScrollBar_Update()
+
+    Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
+
+end
+function Ledger:PrevDay(...)
+    Debug:trace(self, "PrevDay: day:", self.day)
+    self.day = self.day - 1
+    if self.day < 1 then
+        self.day = Date:getDays(self.month, self.year)  -- Wrap around if going below 1
+    end
+    self.event:dispatch("DATE_CHANGED")
+end
+function Ledger:NextDay(...)
+    Debug:trace(self, "NextDay: day:", self.day)
+    self.day = self.day + 1
+    if self.day > Date:getDays(self.month, self.year) then
+        self.day = 1  -- Wrap around if going above 31
+    end
+    self.event:dispatch("DATE_CHANGED")
+end
+
+-- UI
+function Ledger:CreateFrames()
+
     Debug:trace(self, "UI: initialized Frame: ", Frame)
     return LedgerFrame
 end
@@ -349,6 +298,42 @@ function Money:track(Frame, ...)
     end
     self.money = money
 end
+
+local Date = {
+    days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"},
+    months = {
+        January = 31, 
+        February = 28, 
+        March = 31, 
+        April = 30,
+        May = 31,
+        June = 30, 
+        July = 31,
+        August = 31,
+        September = 30,
+        October = 31,
+        November = 30,
+        December = 31
+    },
+}
+function Date:numDaysInMonth(month, year)
+    local numDays = self.months[month] or Debug:error("Month not found.")
+
+    if month == "February" and self:isLeapYear(year) then
+        numDays = numDays + 1
+    end
+    return numDays
+end
+function Date:getYear()
+    return 2025
+end
+function Date:getMonth()
+    return 2
+end
+function Date:isLeapYear(year)
+    return (math.mod(year, 4) == 0 and (math.mod(year, 100) ~= 0 or math.mod(year, 400) == 0))
+end
+
 
 -- Lua fixes
 function id(_)
