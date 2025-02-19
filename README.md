@@ -33,7 +33,7 @@ local main = function ()
     event:on("PLAYER_LOGIN", ledger.enable)
     event:on("PLAYER_LOGOUT", ledger.disable)
 
-    event:on("ADDON_LOADED", ledger.init_db)
+    event:on("VARIABLES_LOADED", ledger.init_db)
     event:on("ADDON_LOADED", ledger.CreateFrames)
 
     event:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
