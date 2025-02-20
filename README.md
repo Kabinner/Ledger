@@ -7,16 +7,16 @@ Some fun things,
 
 ```lua
 MyObject = {}
-function MyObject:init()
-  Frame = CreateFrame("Frame")
-  Frame:SetScript("OnEvent", bind(self, MyObject.load))
-end
 function MyObject:load(...)
   if event == "ADDON_LOADED" then
     if arg[1] == "MyAddon" then
       -- etc
     end
   end
+end
+function MyObject:init()
+  Frame = CreateFrame("Frame")
+  Frame:SetScript("OnEvent", bind(self, MyObject.load))
 end
 ```
 
