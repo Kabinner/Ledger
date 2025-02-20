@@ -28,8 +28,6 @@ local main = function ()
     event:on("VARIABLES_LOADED", ledger.init_db)
     event:on("ADDON_LOADED", ledger.CreateFrames)
 
-    event:on("BUTTON_NEXT_ONCLICK", ledger.NextDay)
-    event:on("BUTTON_PREV_ONCLICK", ledger.PrevDay)
     event:on("DATE_CHANGED", ledger.Update)
 
     event:on("PLAYER_MONEY", money.track)
@@ -105,7 +103,7 @@ function Ledger:new(dispatcher)
     }
 
     setmetatable(instance, Ledger)
-    Debug:trace(Ledger, "new: ", instance, " Dispatcher: ")
+    Debug:trace(instance, "new: Dispatcher: ", dispatcher, "Ledger class id: ", id(Ledger))
     return instance
 end
 
@@ -165,111 +163,106 @@ function Ledger:Update()
 
 end
 function Ledger:PrevDay(...)
-    Debug:trace(self, "PrevDay: day:", self.day)
+    print(arg1)
+    Debug:trace(self, "PrevDay: day:", self.day, " args: ", Debug:unpack(arg))
     self.day = self.day - 1
     if self.day < 1 then
-        self.day = Date:getDays(self.month, self.year)  -- Wrap around if going below 1
+        self.day = Date:numDaysInMonth(self.month, self.year)  -- Wrap around if going below 1
     end
     self.event:dispatch("DATE_CHANGED")
 end
 function Ledger:NextDay(...)
-    Debug:trace(self, "NextDay: day:", self.day)
+    Debug:trace(self, "NextDay: day:", self.day, " args: ", Debug:unpack(arg))
     self.day = self.day + 1
-    if self.day > Date:getDays(self.month, self.year) then
+    if self.day > Date:numDaysInMonth(self.month, self.year) then
         self.day = 1  -- Wrap around if going above 31
     end
     self.event:dispatch("DATE_CHANGED")
 end
 
 
-function Ledger:CreateFrames()
+function Ledger:CreateFrames(Frame)
     self.LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
+    Debug:trace(self, "CreateFrames: Frame: ", self.LedgerFrame)
     self.LedgerFrame:SetWidth(384)
     self.LedgerFrame:SetHeight(512)
     self.LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
     self.LedgerFrame:SetMovable(true)
 
     self.BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
-    self.BackgroundTL:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 0, 0)
+    self.BackgroundTL:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 0, 0)
     self.BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
-    self.BackgroundTR:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", 0, 0)
+    self.BackgroundTR:SetPoint("TOPRIGHT", self.LedgerFrame, "TOPRIGHT", 0, 0)
     self.BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
-    self.BackgroundBL:SetPoint("BOTTOMLEFT", self.Frame, "BOTTOMLEFT", 0, 0)
+    self.BackgroundBL:SetPoint("BOTTOMLEFT", self.LedgerFrame, "BOTTOMLEFT", 0, 0)
     self.BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
-    self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", 0, 0)
+    self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.LedgerFrame, "BOTTOMRIGHT", 0, 0)
 
-    self.CloseButton = self.Frame:CreateFrame("Button", nil, self.Frame, "UIPanelCloseButton")
-    self.CloseButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -30, -8)
+    self.CloseButton = self.LedgerFrame:CreateFrame("Button", nil, self.LedgerFrame, "UIPanelCloseButton")
+    self.CloseButton:SetPoint("TOPRIGHT", self.LedgerFrame, "TOPRIGHT", -30, -8)
 
-    self.Title = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.Title = self.LedgerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     self.Title:SetText("Ledger")
-    self.Title:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 80, -18)
+    self.Title:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 80, -18)
 
-    self.TitleDate = self.Frame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+    self.TitleDate = self.LedgerFrame:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     self.TitleDate:SetText("Sunday 16/2")
-    self.TitleDate:SetPoint("TOP", self.Frame, "TOP", -0, -18)
+    self.TitleDate:SetPoint("TOP", self.LedgerFrame, "TOP", -0, -18)
 
-    self.DragTitle = self.Frame:CreateFrame("Frame")
+    self.DragTitle = self.LedgerFrame:CreateFrame("Frame")
     self.DragTitle:SetSize(265, 28)
-    self.DragTitle:SetPoint("TOP", self.Frame, "TOP", 5, -10)
+    self.DragTitle:SetPoint("TOP", self.LedgerFrame, "TOP", 5, -10)
     self.DragTitle:EnableMouse(true)
-    self.DragTitle:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
-    self.DragTitle:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
+    self.DragTitle:SetScript("OnMouseDown", function() self.LedgerFrame:StartMoving() end)
+    self.DragTitle:SetScript("OnMouseUp", function() self.LedgerFrame:StopMovingOrSizing() end)
     self.DragTitle:Debug()
 
-    self.Icon = self.Frame:Texture('Icon', 'BACKGROUND', 58, 58, [[Interface\Spellbook\Spellbook-Icon]])
-    self.Icon:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 10, -8)
+    self.Icon = self.LedgerFrame:Texture('Icon', 'BACKGROUND', 58, 58, [[Interface\Spellbook\Spellbook-Icon]])
+    self.Icon:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 10, -8)
 
-    self.DragIcon = self.Frame:CreateFrame("Frame")
+    self.DragIcon = self.LedgerFrame:CreateFrame("Frame")
     self.DragIcon:SetPoint("TOP", Icon, "TOP", 0, 0) 
     self.DragIcon:SetSize(58, 58) 
     self.DragIcon:EnableMouse(true)
-    self.DragIcon:SetScript("OnMouseDown", function() self.Frame:StartMoving() end)
-    self.DragIcon:SetScript("OnMouseUp", function() self.Frame:StopMovingOrSizing() end)
+    self.DragIcon:SetScript("OnMouseDown", function() self.LedgerFrame:StartMoving() end)
+    self.DragIcon:SetScript("OnMouseUp", function() self.LedgerFrame:StopMovingOrSizing() end)
     self.DragIcon:Debug()
 
-    self.CreateNavigation()
-    self.CreateScrollContainer()
+    self:CreateNavigation()
+    self:CreateScrollContainer()
 end
 
 function Ledger:CreateNavigation()
-    self.PrevButton = self.Frame:CreateFrame("Button", "PrevDayButton")
+    self.PrevButton = self.LedgerFrame:CreateFrame("Button", "PrevDayButton")
     self.PrevButton:SetSize(28, 28)
-    self.PrevButton:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 91, -40)
+    self.PrevButton:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 91, -40)
     self.PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
     self.PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
 
-    self.NextButton = self.Frame:CreateFrame("Button", "NextDayButton")
+    self.NextButton = self.LedgerFrame:CreateFrame("Button", "NextDayButton")
     self.NextButton:SetSize(28, 28)
-    self.NextButton:SetPoint("TOPRIGHT", self.Frame, "TOPRIGHT", -44, -40)
+    self.NextButton:SetPoint("TOPRIGHT", self.LedgerFrame, "TOPRIGHT", -44, -40)
     self.NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
     self.NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
 
-    self.DayDropdown = self.Frame:CreateFrame("Frame", "DayDropdown", self.Frame, "UIDropDownMenuTemplate")
-    self.DayDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 100, -40)
+    self.DayDropdown = self.LedgerFrame:CreateFrame("Frame", "DayDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
+    self.DayDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 100, -40)
 
-    self.MonthDropdown = self.Frame:CreateFrame("Frame", "MonthDropdown", self.Frame, "UIDropDownMenuTemplate")
-    self.MonthDropdown:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 180, -40)
+    self.MonthDropdown = self.LedgerFrame:CreateFrame("Frame", "MonthDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
+    self.MonthDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 180, -40)
 
 
-    self.DayDropdown:SetDropdown("Day", 48, Date:getDays(self.year))
+    self.DayDropdown:SetDropdown("Day", 48, Date:getDaysInMonth(self.month, self.year))
     self.MonthDropdown:SetDropdown("Month", 100, Date:getMonthNames())
 
-    self.NextButton:SetScript("OnClick", function () 
-        Debug:trace(self, "NextButton:SetScript:OnClick")
-        self.event:dispatch("BUTTON_NEXT_ONCLICK") 
-    end)
-
-    self.PrevButton:SetScript("OnClick", function () 
-        Debug:trace(self, "PrevButton:SetScript:OnClick")
-        self.event:dispatch("BUTTON_PREV_ONCLICK") 
-    end)
+    self.NextButton:SetScript("OnClick", bind(self, self.NextDay)) 
+    self.PrevButton:SetScript("OnClick", bind(self, self.PrevDay))
 
 end
 function Ledger:CreateScrollContainer()
     self.ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
-    self.ScrollContainer:SetPoint("TOPLEFT", self.Frame, "TOPLEFT", 22, -80)
-    self.ScrollContainer:SetPoint("BOTTOMRIGHT", self.Frame, "BOTTOMRIGHT", -65, 80)
+    self.ScrollContainer:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 22, -80)
+    self.ScrollContainer:SetPoint("BOTTOMRIGHT", self.LedgerFrame, "BOTTOMRIGHT", -65, 80)
 
     self.ScrollFrame = self.ScrollContainer:CreateFrame("ScrollFrame", "LedgerScrollFrame")
     self.ScrollFrame:SetAllPoints(self.ScrollContainer)
@@ -304,27 +297,50 @@ function Ledger:CreateScrollContainer()
 end
 
 
-local Date = {
-    days = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"},
+Date = {
+    day_names = {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"},
     months = {
-        January = 31, 
-        February = 28, 
-        March = 31, 
-        April = 30,
-        May = 31,
-        June = 30, 
-        July = 31,
-        August = 31,
-        September = 30,
-        October = 31,
-        November = 30,
-        December = 31
-    },
+        {name = "January", days = 31},
+        {name = "February", days = 28},
+        {name = "March", days = 31},
+        {name = "April", days = 30},
+        {name = "May", days = 31},
+        {name = "June", days = 30},
+        {name = "July", days = 31},
+        {name = "August", days = 31},
+        {name = "September", days = 30},
+        {name = "October", days = 31},
+        {name = "November", days = 30},
+        {name = "December", days = 31}
+    }
 }
-function Date:numDaysInMonth(month, year)
-    local numDays = self.months[month] or Debug:error("Month not found.")
-
+function range(start, stop)
+    local t = {}
+    for i = start, stop do
+        table.insert(t, i)
+    end
+    return t
+end
+function Date:getMonthNames()
+    local monthNames = {}
+    for i = 1, table.getn(self.months) do
+        table.insert(monthNames, self.months[i].name)
+    end
+    return monthNames
+end
+function Date:getDaysInMonth(month, year)
+    local numDays = self.months[month].days or error("Month not found.")
     if month == "February" and self:isLeapYear(year) then
+        numDays = numDays + 1
+    end
+
+    return range(1, numDays)
+end
+
+function Date:numDaysInMonth(month, year)
+    local numDays = self.months[month].days or error("Month not found.")
+
+    if month == 2 and self:isLeapYear(year) then
         numDays = numDays + 1
     end
     return numDays
@@ -334,6 +350,9 @@ function Date:getYear()
 end
 function Date:getMonth()
     return 2
+end
+function Date:getDay()
+    return 1
 end
 function Date:isLeapYear(year)
     return (math.mod(year, 4) == 0 and (math.mod(year, 100) ~= 0 or math.mod(year, 400) == 0))
@@ -369,25 +388,35 @@ function table.prepend(source, target)
     return copy
 end
 
--- WoW print.
+
+-- WoW.
+function bind(obj, fn)
+    return function(...)
+        local args = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10}
+        arg = table.prepend(args, arg)
+        return fn(obj, unpack(arg))
+    end
+end
+
 function print(_, ...)
     local msg = ""
-    local args = arg
 
-    if type(_) == "table" then
+    if type(_) == "nil" then
+        DEFAULT_CHAT_FRAME:AddMessage("nil");
+    elseif type(_) == "table" then
         if _.name then
             msg = _.name .. ": "
         else
             msg = id(_)
         end
-    elseif type(_) == "string" then
-        args = table.prepend({_}, args)
+    else
+        arg = table.prepend({_}, arg)
     end
 
     local value
-    for idx = 1,table.getn(args) do
+    for idx = 1,table.getn(arg) do
         if idx ~= "n" then
-            value = args[idx]
+            value = arg[idx]
         
             if type(value) == "nil" then
                 msg = msg .. "nil"
@@ -493,10 +522,11 @@ function Debug:unpack(_, sep)
     if type(_) ~= "table" or not table.getn(_) then
         return
     end
-    local args = {}
     if not sep then
         sep = " "
     end
+
+    local args = {}
     for idx = 1,table.getn(_) do
         if idx ~= "n" then
             args[idx] = tostring(_[idx]) .. sep
@@ -523,7 +553,7 @@ function Debug:print(_, level, ...)
     if type(_) == "string" then
         msg = msg .. _
     elseif type(_) == "table" and _.name then 
-        msg = msg .. _.name .."[" .. id(_) .."]:"
+        msg = msg .. _.name .. "[" .. id(_) .."]:"
     end
 
     print(msg, unpack(arg))
@@ -540,14 +570,25 @@ function Debug:trace(caller, ...)
     self:print(caller, Debug.TRACE, unpack(arg))
 end
 function Debug:error(caller, ...)
-    local args
-    if type(caller) ~= "object" then
-        args = table.prepend({caller}, arg)
+
+    if type(caller) ~= "table" then
+        arg = table.prepend({caller}, arg)
         caller = {}
     end
-    caller.DEBUG_COLOR = "FF2400"
+
+    local _color = caller.LOG_COLOR
+    local _debug = caller.DEBUG
+
+    caller.LOG_COLOR = "FF2400"
     caller.DEBUG = true
-    self:print(caller, Debug.ERROR, unpack(args))
+
+    if string.find(arg[1], "Interface\\AddOns") then
+        arg[1] = string.sub(arg[1], string.find(arg[1], "\\[^\\]*$") + 1)
+    end
+    self:print(caller, Debug.ERROR, unpack(arg))
+
+    caller.LOG_COLOR = _color
+    caller.DEBUG = _debug
 end
 
 
@@ -565,8 +606,8 @@ function Dispatcher:new()
         objects = {},
         hooks = {},
     }
-    setmetatable(instance, self)
-    self.__index = self
+    setmetatable(instance, Dispatcher)
+    Dispatcher.__index = Dispatcher
     Debug:trace(instance, "new")
     return instance
 end
@@ -643,20 +684,23 @@ function Dispatcher:on(event, callback)
     table.insert(obj_data.events[event], callback)
 end
 
-function Dispatcher:dispatch(e)
+function Dispatcher:dispatch(custom_event, ...)
+    if type(event) == "string" then
+        e = event
+        arg = table.prepend({custom_event}, arg)
+    else
+        e = custom_event
+    end
+    
+    Debug:trace(self, "dispatch: event: ", event, " e: ", e, " args: ", Debug:unpack(arg))
     for obj, obj_data in pairs(self.objects) do
-        if event then
-            e = event
-        end
         local handlers = obj_data.events[e]
         if handlers then
             if e == "ADDON_LOADED" then
-                if arg1 == obj.name then
-                    Debug:trace(self, "dispatch: e: ", e, " event: ", event, " obj: ", obj, " args: ", arg1)
+                if arg[1] == obj.name then
                     self:trigger(obj, obj_data, handlers)
                 end
             else
-                Debug:trace(self, "dispatch: e: ", e, " event: ", event, " obj: ", obj, " args: ", arg1)
                 self:trigger(obj, obj_data, handlers)
             end
         end
@@ -675,7 +719,7 @@ function Dispatcher:trigger(obj, obj_data, handlers, ...)
         end)
         
         if not success then
-            Debug:error(self, "trigger in ", obj.name, ":", fn_name, " - ", err)
+            Debug:error(obj, err)
         end
     end
 end
@@ -683,11 +727,12 @@ end
 function Dispatcher:listen()
     Debug:trace(self, "listen on frame ", self.Frame)
 
-    local event
-    self.Frame:SetScript("OnEvent", function()
-        Debug:trace(self, "Event name: ", event, " type: ", type(event) ," arg1: ", arg1)
-        self:dispatch(event)
-    end)
+    self.Frame:SetScript("OnEvent", bind(self, self.dispatch))
+
+    -- function()
+    --     Debug:trace(self, "Event name: ", event, " type: ", type(event) ," arg1: ", arg1)
+    --     self:dispatch(event)
+    -- end
 end
 
 
