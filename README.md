@@ -32,3 +32,18 @@ test("foo", "bar")
 
 and more..
 ```
+
+Some fun things,
+
+```lua
+MyObject = {}
+function MyObject:load(...)
+  if event == "ADDON_LOADED" then
+    if arg[1] == "MyAddon" then
+      -- etc
+    end
+  end
+end
+
+Frame:SetScript("OnEvent", bind(self, MyObject.load))
+```
