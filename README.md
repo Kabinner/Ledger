@@ -19,6 +19,7 @@ print.lua
 -- print()
 print("Foo: ", 42) -- Foo: 42
 print("Foo: ", "Bar: ", 42) -- Foo: Bar: 42
+print("Foo: ", table1) -- Foo: 27FC3608
 ```
 Debug.lua
 ```lua
