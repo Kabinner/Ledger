@@ -162,7 +162,6 @@ function Ledger:Update()
 
 end
 function Ledger:PrevDay(...)
-    print(arg1)
     Debug:trace(self, "PrevDay: day:", self.day, " args: ", Debug:unpack(arg))
     self.day = self.day - 1
     if self.day < 1 then
