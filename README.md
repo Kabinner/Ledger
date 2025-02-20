@@ -7,6 +7,10 @@ Some fun things,
 
 ```lua
 MyObject = {}
+function MyObject:init()
+  Frame = CreateFrame("Frame")
+  Frame:SetScript("OnEvent", bind(self, MyObject.load))
+end
 function MyObject:load(...)
   if event == "ADDON_LOADED" then
     if arg[1] == "MyAddon" then
@@ -14,8 +18,6 @@ function MyObject:load(...)
     end
   end
 end
-
-Frame:SetScript("OnEvent", bind(self, MyObject.load))
 ```
 
 luafixes.lua
