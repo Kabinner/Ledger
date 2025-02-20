@@ -42,8 +42,8 @@ Debug.lua
 ```lua
 -- Debug:unpack()
 function test(...)
-  Debug:unpack(arg) -- "foo bar"
-  Debug:unpack(arg, ", ") -- "foo, bar"
+  print("arg: ", Debug:unpack(arg)) -- "arg: foo bar"
+  print("arg: ", Debug:unpack(arg, ", ")) -- "arg: foo, bar"
 end
 test("foo", "bar")
 
