@@ -183,8 +183,7 @@ function Ledger:CreateFrames(Frame)
     Debug:trace(self, "CreateFrames: Frame: ", Frame)
 
     self.LedgerFrame = Frame:CreateFrame("Frame", "LedgerFrame", UIParent)
-    self.LedgerFrame:SetWidth(384)
-    self.LedgerFrame:SetHeight(512)
+    self.LedgerFrame:SetSize(384, 512)
     self.LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
     self.LedgerFrame:SetMovable(true)
 
