@@ -4,4 +4,9 @@
 ## Notes: Ledger
 ## Version: GIT
 ## SavedVariables LedgerDB
+luafixes.lua
+print.lua
+Debug.lua
+CreateFrame.lua
+Dispatcher.lua
 Ledger.lua
