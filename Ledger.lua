@@ -254,8 +254,8 @@ function Ledger:CreateNavigation()
     self.DayDropdown:SetDropdown("Day", 48, Date:getDaysInMonth(self.month, self.year))
     self.MonthDropdown:SetDropdown("Month", 100, Date:getMonthNames())
 
-    self.NextButton:SetScript("OnClick", bind(self, self.NextDay)) 
-    self.PrevButton:SetScript("OnClick", bind(self, self.PrevDay))
+    self.NextButton:SetScript("OnClick", bind(self, Ledger.NextDay)) 
+    self.PrevButton:SetScript("OnClick", bind(self, Ledger.PrevDay))
 
 end
 function Ledger:CreateScrollContainer()
