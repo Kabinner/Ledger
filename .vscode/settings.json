@@ -1,0 +1,20 @@
+{
+    "Lua.diagnostics.globals": [
+        "UIParent",
+        "getfenv",
+        "setfenv",
+        "GetMoney",
+        "SlashCmdList",
+        "arg1",
+        "RepairAllItems",
+        "UseContainerItem",
+        "PickupMerchantItem",
+        "SendMail",
+        "PlaceAuctionBid",
+        "PickupPlayerMoney",
+        "UIDropDownMenu_SetSelectedID"
+    ],
+    "Lua.diagnostics.disable": [
+        "deprecated"
+    ]
+}

@@ -88,22 +88,26 @@ function Dispatcher:on(event, callback)
     if not obj_data.events[event] then
         obj_data.events[event] = {}
     end
+
     table.insert(obj_data.events[event], callback)
 end
 
 function Dispatcher:dispatch(custom_event, ...)
+    local e
     if type(event) == "string" then
-        e = event
+        -- e = event
         arg = table.prepend({custom_event}, arg)
     else
         e = custom_event
+        Debug:trace(self, "!!custom event: ", e)
     end
     
     Debug:trace(self, "dispatch: event: ", event, " e: ", e, " args: ", Debug:unpack(arg))
+
     for obj, obj_data in pairs(self.objects) do
-        local handlers = obj_data.events[e]
+        local handlers = obj_data.events[event] or obj_data.events[e]
         if handlers then
-            if e == "ADDON_LOADED" then
+            if event == "ADDON_LOADED" then
                 if arg[1] == obj.name then
                     self:trigger(obj, obj_data, handlers)
                 end

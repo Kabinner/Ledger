@@ -52,26 +52,35 @@ CreateFrame = function(...)
 
 
     function Frame:SetDropdown(label, width, data)
-            -- Initialize the dropdown menu
+        Debug:trace("Frame id: ", Frame)
+        -- Initialize the dropdown menu
         local function Initialize()
     
             for i, val in ipairs(data) do
                 local info = {
                     text = val,
-                    value = i,
-                    arg1 = i,
+                    value = tostring(i),
+                    arg1 = tostring(i)
                 }
-                info.func = function(value)
-                    UIDropDownMenu_SetText(data[value], Frame)
-                end
+                info.func = self.SetValue
                 UIDropDownMenu_AddButton(info)
             end
         end
     
-        UIDropDownMenu_Initialize(self, Initialize)
+        Frame.Initialize = Initialize
+        Frame.SetValue = function(foo, bar, foobar)
+            if type(foo) ~= "table" then
+                value = foo
+            else
+                value = bar
+            end
+            UIDropDownMenu_SetText(value, Frame)
+            UIDropDownMenu_SetSelectedValue(Frame, value)
+            Debug:trace("UIDropDownMenu_Initialize:callback: this: ", this, " Frame: ", Frame, " Data: ", data, " Value: ", value, " self:", self, " foo: ", foo, " bar: ", bar, " foobar: ", foobar)
+        end
         UIDropDownMenu_SetWidth(width, self)
         UIDropDownMenu_SetText(label, self)
-    
+        UIDropDownMenu_Initialize(self, Frame.Initialize)
         return Frame
     end
 

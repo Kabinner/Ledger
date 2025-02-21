@@ -64,6 +64,8 @@ end
 
 function Money:track(Frame, ...)
     Debug:trace(self, "args: ", Debug:unpack(arg))
+    
+    ---@type number
     local money = GetMoney()
     local difference = money - self.money
     if difference ~= 0 then
@@ -98,7 +100,7 @@ function Ledger:new(dispatcher)
         ScrollContainer = nil, ScrollFrame = nil, ScrollBar = nil, ContentFrame = nil,
 
         PrevButton = nil, NextButton = nil,
-        DayDropdown = nil, MonthDropdown = nil,
+        DayDropdown = nil, MonthDropdown = nil, YearDropDown = nil,
     }
 
     setmetatable(instance, Ledger)
@@ -121,6 +123,7 @@ function Ledger:enable(Frame)
     SlashCmdList["LEDGER"] = function(msg)
         Debug:log(self, "/ledger command.")
     end
+    self:Update()
 end
 function Ledger:disable()
 end
@@ -158,7 +161,12 @@ function Ledger:Update()
     -- self.Content_Update()
     -- self.ScrollBar_Update()
 
-    Debug:trace(self, " UpdateDateDisplay: ", "Current Day: ", self.day)
+    Debug:trace(self, "Update: ", "Current Day: ", self.day, " type: ", type(self.day))
+
+    self.DayDropdown:SetValue(self.day)
+    self.MonthDropdown:SetValue(Date:getMonthNames()[self.month])
+    self.YearDropdown:SetValue(self.year)
+    Debug:trace(self, "DayDropdown:SetValue: ", UIDropDownMenu_SetSelectedID, " DayDropdown:", self.DayDropdown)
 
 end
 function Ledger:PrevDay(...)
@@ -187,13 +195,13 @@ function Ledger:CreateFrames(Frame)
     self.LedgerFrame:SetPoint("TOPLEFT", UIParent, "TOPLEFT", 0, 0)
     self.LedgerFrame:SetMovable(true)
 
-    self.BackgroundTL = LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
+    self.BackgroundTL = self.LedgerFrame:Texture("BackgroundTL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopLeft]])
     self.BackgroundTL:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 0, 0)
-    self.BackgroundTR = LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
+    self.BackgroundTR = self.LedgerFrame:Texture("BackgroundTR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-TopRight]])
     self.BackgroundTR:SetPoint("TOPRIGHT", self.LedgerFrame, "TOPRIGHT", 0, 0)
-    self.BackgroundBL = LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
+    self.BackgroundBL = self.LedgerFrame:Texture("BackgroundBL", "ARTWORK", 256, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomLeft]])
     self.BackgroundBL:SetPoint("BOTTOMLEFT", self.LedgerFrame, "BOTTOMLEFT", 0, 0)
-    self.BackgroundBR = LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
+    self.BackgroundBR = self.LedgerFrame:Texture("BackgroundBR", "ARTWORK", 128, 256, [[Interface\PaperDollInfoFrame\UI-Character-General-BottomRight]])
     self.BackgroundBR:SetPoint("BOTTOMRIGHT", self.LedgerFrame, "BOTTOMRIGHT", 0, 0)
 
     self.CloseButton = self.LedgerFrame:CreateFrame("Button", nil, self.LedgerFrame, "UIPanelCloseButton")
@@ -219,7 +227,7 @@ function Ledger:CreateFrames(Frame)
     self.Icon:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 10, -8)
 
     self.DragIcon = self.LedgerFrame:CreateFrame("Frame")
-    self.DragIcon:SetPoint("TOP", Icon, "TOP", 0, 0) 
+    self.DragIcon:SetPoint("TOP", self.Icon, "TOP", 0, 0)
     self.DragIcon:SetSize(58, 58) 
     self.DragIcon:EnableMouse(true)
     self.DragIcon:SetScript("OnMouseDown", function() self.LedgerFrame:StartMoving() end)
@@ -233,7 +241,7 @@ end
 function Ledger:CreateNavigation()
     self.PrevButton = self.LedgerFrame:CreateFrame("Button", "PrevDayButton")
     self.PrevButton:SetSize(28, 28)
-    self.PrevButton:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 91, -40)
+    self.PrevButton:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 68, -40)
     self.PrevButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Up]])
     self.PrevButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-PrevPage-Down]])
 
@@ -243,22 +251,28 @@ function Ledger:CreateNavigation()
     self.NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
     self.NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
 
-    self.DayDropdown = self.LedgerFrame:CreateFrame("Frame", "DayDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
-    self.DayDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 100, -40)
+    self.DayDropdown = self.LedgerFrame:CreateFrame("Frame", "LedgerDayDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
+    Debug:trace("DayDropdown: ", self.DayDropdown)
+    self.DayDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 75+4, -40)
 
-    self.MonthDropdown = self.LedgerFrame:CreateFrame("Frame", "MonthDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
-    self.MonthDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 180, -40)
+    self.MonthDropdown = self.LedgerFrame:CreateFrame("Frame", "LedgerMonthDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
+    self.MonthDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 140+4, -40)
 
+    self.YearDropdown = self.LedgerFrame:CreateFrame("Frame", "LedgerYearDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
+    self.YearDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 224+4, -40)
 
     self.DayDropdown:SetDropdown("Day", 48, Date:getDaysInMonth(self.month, self.year))
-    self.MonthDropdown:SetDropdown("Month", 100, Date:getMonthNames())
+    self.MonthDropdown:SetDropdown("Month", 68, Date:getMonthNames())
+    self.YearDropdown:SetDropdown("Year", 50, {2025})
 
-    self.NextButton:SetScript("OnClick", bind(self, Ledger.NextDay)) 
+
+    self.NextButton:SetScript("OnClick", bind(self, Ledger.NextDay))
     self.PrevButton:SetScript("OnClick", bind(self, Ledger.PrevDay))
+
 
 end
 function Ledger:CreateScrollContainer()
-    self.ScrollContainer = LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
+    self.ScrollContainer = self.LedgerFrame:CreateFrame("Frame", "LedgerScrollContainer")
     self.ScrollContainer:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 22, -80)
     self.ScrollContainer:SetPoint("BOTTOMRIGHT", self.LedgerFrame, "BOTTOMRIGHT", -65, 80)
 
@@ -315,7 +329,7 @@ Date = {
 function range(start, stop)
     local t = {}
     for i = start, stop do
-        table.insert(t, i)
+        table.insert(t, tostring(i))
     end
     return t
 end
