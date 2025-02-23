@@ -71,6 +71,8 @@ local Event = {
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "7DF9FF",
 }
+Event.__index = Event
+
 function Event:new(name)
     local instance = {
         name = name,
@@ -80,22 +82,20 @@ function Event:new(name)
     assert(instance.eventType == TYPE_EVENT_CUSTOM or instance.eventType == TYPE_EVENT_FRAME,
     string.format("Event %s is not a type of %s %s", name, TYPE_EVENT_FRAME, TYPE_EVENT_CUSTOM))
 
-
     setmetatable(instance, Event)
-    Event.__index = Event
     Debug:trace(instance, "new: type: ", instance.eventType)
     return instance
 end
 function Event:__eq(other)
     if type(other) == "table" and getmetatable(other) == Event then
         return self.name == other.name
-    elseif type(other) == "string" then
-        return self.name == other
     end
     return false
 end
 setmetatable(Event, { __eq = Event.__eq })
-
+function Event:equals(value)
+    return self.name == value
+end
 
 
 Dispatcher = {
@@ -104,6 +104,7 @@ Dispatcher = {
     LOG_LEVEL = "TRACE",
     LOG_COLOR = "7DF9FF",
 }
+Dispatcher.__index = Dispatcher
 
 function Dispatcher:new()
     local instance = {
@@ -113,7 +114,6 @@ function Dispatcher:new()
         hooks = {},
     }
     setmetatable(instance, Dispatcher)
-    Dispatcher.__index = Dispatcher
     Debug:trace(instance, "new")
     return instance
 end
