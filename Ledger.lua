@@ -166,22 +166,49 @@ function Ledger:Update()
     self.DayDropdown:SetValue(self.day)
     self.MonthDropdown:SetValue(Date:getMonthNames()[self.month])
     self.YearDropdown:SetValue(self.year)
-    Debug:trace(self, "DayDropdown:SetValue: ", UIDropDownMenu_SetSelectedID, " DayDropdown:", self.DayDropdown)
-
+    Debug:trace(self, "Ledger:Update: ", UIDropDownMenu_SetSelectedID, " DayDropdown:", self.DayDropdown)
+end
+function Ledger:SetDay(e, day)
+    Debug:trace(self, "SetDay: ", day)
+    self.day = day
+    return day
+end
+function Ledger:SetMonth(e, month)
+    Debug:trace(self, "SetMonth: ", month)
+    self.month = month
+    return month
+end
+function Ledger:SetYear(...)
+    Debug:trace(self, "SetYear: arg:", Debug:unpack(arg))
+    year = arg[2]
+    self.year = year
+    return year
 end
 function Ledger:PrevDay(...)
     Debug:trace(self, "PrevDay: day:", self.day, " args: ", Debug:unpack(arg))
     self.day = self.day - 1
     if self.day < 1 then
-        self.day = Date:numDaysInMonth(self.month, self.year)  -- Wrap around if going below 1
+        if self.month == 1 then
+            self.month = 12
+            self.year = self.year - 1
+        else
+            self.month = self.month - 1
+        end
+        self.day = Date:numDaysInMonth(self.month, self.year)
     end
     self.event:dispatch("DATE_CHANGED")
 end
 function Ledger:NextDay(...)
-    Debug:trace(self, "NextDay: day:", self.day, " args: ", Debug:unpack(arg))
+    Debug:trace(self, "NextDay: day:", self.day, " month: ", self.month, " year: ", self.year, " args: ", Debug:unpack(arg))
     self.day = self.day + 1
     if self.day > Date:numDaysInMonth(self.month, self.year) then
-        self.day = 1  -- Wrap around if going above 31
+        self.day = 1
+        if self.month == 12 then
+            self.month = 1
+            self.year = self.year + 1
+        else
+            self.month = self.month + 1
+        end
     end
     self.event:dispatch("DATE_CHANGED")
 end
@@ -250,24 +277,25 @@ function Ledger:CreateNavigation()
     self.NextButton:SetPoint("TOPRIGHT", self.LedgerFrame, "TOPRIGHT", -44, -40)
     self.NextButton:SetNormalTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Up]])
     self.NextButton:SetPushedTexture([[Interface\Buttons\UI-SpellbookIcon-NextPage-Down]])
+    self.NextButton:SetScript("OnClick", bind(self, Ledger.NextDay))
+    self.PrevButton:SetScript("OnClick", bind(self, Ledger.PrevDay))
+
 
     self.DayDropdown = self.LedgerFrame:CreateFrame("Frame", "LedgerDayDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
-    Debug:trace("DayDropdown: ", self.DayDropdown)
     self.DayDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 75+4, -40)
+    self.DayDropdown:SetDropdown("Day", Date:getDaysInMonth(self.month, self.year), bind(self, Ledger.SetDay))
+    self.DayDropdown:SetSize(48, 20)
 
     self.MonthDropdown = self.LedgerFrame:CreateFrame("Frame", "LedgerMonthDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
     self.MonthDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 140+4, -40)
+    self.MonthDropdown:SetDropdown("Month", Date:getMonthNames(), bind(self, Ledger.SetMonth))
+    self.MonthDropdown:SetSize(68)
 
     self.YearDropdown = self.LedgerFrame:CreateFrame("Frame", "LedgerYearDropdown", self.LedgerFrame, "UIDropDownMenuTemplate")
     self.YearDropdown:SetPoint("TOPLEFT", self.LedgerFrame, "TOPLEFT", 224+4, -40)
+    self.YearDropdown:SetDropdown("Year", {2025,2026,2027,2028}, bind(self, Ledger.SetYear))
+    self.YearDropdown:SetSize(50)
 
-    self.DayDropdown:SetDropdown("Day", 48, Date:getDaysInMonth(self.month, self.year))
-    self.MonthDropdown:SetDropdown("Month", 68, Date:getMonthNames())
-    self.YearDropdown:SetDropdown("Year", 50, {2025})
-
-
-    self.NextButton:SetScript("OnClick", bind(self, Ledger.NextDay))
-    self.PrevButton:SetScript("OnClick", bind(self, Ledger.PrevDay))
 
 
 end

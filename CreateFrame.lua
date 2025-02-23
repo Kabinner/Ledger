@@ -1,7 +1,12 @@
 function bind(obj, fn)
     return function(...)
+        Debug:trace(obj, "bind: event:", event, " arg1: ", arg1)
         local args = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10}
-        arg = table.prepend(args, arg)
+        if table.getn(args) == 0 then
+            args = {"CUSTOM_EVENT"}
+        else
+            arg = table.prepend(args, arg)
+        end
         return fn(obj, unpack(arg))
     end
 end
@@ -51,36 +56,65 @@ CreateFrame = function(...)
     end
 
 
-    function Frame:SetDropdown(label, width, data)
-        Debug:trace("Frame id: ", Frame)
+    function Frame:SetDropdown(label, data, fn)
+        Debug:trace("Frame:SetDropdown Frame label: ", label, " id: ", Frame, " fn: ", fn)
+
+
+        
+
         -- Initialize the dropdown menu
         local function Initialize()
-    
+            Debug:trace("Frame:SetDropDown:Initialize self: ", self)
+
             for i, val in ipairs(data) do
                 local info = {
                     text = val,
                     value = tostring(i),
-                    arg1 = tostring(i)
+                    arg1 = tostring(i),
+                    arg2 = fn
                 }
                 info.func = self.SetValue
                 UIDropDownMenu_AddButton(info)
             end
+
+            self.Label = label
+            function Frame:SetSize(width, height)
+                Debug:trace("Frame:SetWidth self: ", self, " width:", width)
+                if width then
+                    UIDropDownMenu_SetWidth(width, self)
+                end
+            end
+            
+            if fn then
+                Debug:trace("Frame:SetDropdown[",self.Label,"]: self.Callback: ", fn)
+                self.Callback = fn
+            end
         end
-    
-        Frame.Initialize = Initialize
-        Frame.SetValue = function(foo, bar, foobar)
-            if type(foo) ~= "table" then
-                value = foo
+        self.Initialize = Initialize
+
+
+        UIDropDownMenu_SetText(self.Label, self)
+        UIDropDownMenu_Initialize(self, Frame.Initialize)
+        
+        self.SetValue = function(...)
+            local value
+            if type(arg[1]) ~= "table" then
+                value = arg[1]
+                fn = arg[2]
             else
-                value = bar
+                value = arg[2]
+                fn = arg[3]
             end
             UIDropDownMenu_SetText(value, Frame)
             UIDropDownMenu_SetSelectedValue(Frame, value)
-            Debug:trace("UIDropDownMenu_Initialize:callback: this: ", this, " Frame: ", Frame, " Data: ", data, " Value: ", value, " self:", self, " foo: ", foo, " bar: ", bar, " foobar: ", foobar)
+
+            Debug:trace("Frame:SetValue: this: ", this, " Frame: ", Frame, " callback: ", self.Callback, " Data: ", data, " Value: ", value, " self:", self, " foo: ", foo, " bar: ", bar, " foobar: ", foobar)
+
+            Debug:trace("Frame:SetValue:Callback: fn: ", self.Callback, " value:", value)
+            self.Callback(value)
+            return self
         end
-        UIDropDownMenu_SetWidth(width, self)
-        UIDropDownMenu_SetText(label, self)
-        UIDropDownMenu_Initialize(self, Frame.Initialize)
+        
         return Frame
     end
 
