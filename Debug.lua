@@ -15,15 +15,15 @@ function Debug:unpack(_, sep)
     end
 
     local args = {}
-    for idx = 1,table.getn(_) do
+    for idx in _ do
         if idx ~= "n" then
             args[idx] = tostring(_[idx]) .. sep
         end
-    end  
+    end
     return unpack(args)
-end    
+end
 
-function Debug:print(_, level, ...)
+function Debug:print(_, level, msg, ...)
     if type(_) == "table" and not _.DEBUG then
         return
     end
@@ -51,13 +51,13 @@ function Debug:log(caller, ...)
 
     self:print(caller, Debug.INFO, unpack(arg))
 end
-function Debug:trace(caller, ...)
+function Debug:trace(caller, msg, ...)
     if not caller or type(caller) == 'table' and caller.LOG_LEVEL ~= self.TRACE then
         return
     end
     self:print(caller, Debug.TRACE, unpack(arg))
 end
-function Debug:error(caller, ...)
+function Debug:error(caller, msg, ...)
 
     if type(caller) ~= "table" then
         arg = table.prepend({caller}, arg)

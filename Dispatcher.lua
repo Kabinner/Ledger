@@ -63,8 +63,6 @@ local function isFrameEvent(prefix)
     return eventPrefixMap[prefix] or false
 end
 
-local TYPE_EVENT_FRAME = "FRAME_EVENT"
-local TYPE_EVENT_CUSTOM = "CUSTOM_EVENT"
 
 local Event = {
     DEBUG = true,
@@ -72,19 +70,24 @@ local Event = {
     LOG_COLOR = "7DF9FF",
 }
 Event.__index = Event
+Event.TYPE_EVENT_FRAME = "FRAME_EVENT"
+Event.TYPE_EVENT_CUSTOM = "CUSTOM_EVENT"
 
 function Event:new(name)
     local instance = {
         name = name,
-        eventType = (isFrameEvent(getPrefix(name)) and TYPE_EVENT_FRAME or TYPE_EVENT_CUSTOM),
+        eventType = (isFrameEvent(getPrefix(name)) and Event.TYPE_EVENT_FRAME or Event.TYPE_EVENT_CUSTOM),
         callback = nil
     }
-    assert(instance.eventType == TYPE_EVENT_CUSTOM or instance.eventType == TYPE_EVENT_FRAME,
-    string.format("Event %s is not a type of %s %s", name, TYPE_EVENT_FRAME, TYPE_EVENT_CUSTOM))
+    assert(instance.eventType == Event.TYPE_EVENT_CUSTOM or instance.eventType == Event.TYPE_EVENT_FRAME,
+    string.format("Event %s is not a type of %s %s", name, Event.TYPE_EVENT_FRAME, Event.TYPE_EVENT_CUSTOM))
 
     setmetatable(instance, Event)
     Debug:trace(instance, "new: type: ", instance.eventType)
     return instance
+end
+function Event:isNative()
+    return self.eventType == Event.TYPE_EVENT_FRAME
 end
 function Event:__eq(other)
     if type(other) == "table" and getmetatable(other) == Event then
