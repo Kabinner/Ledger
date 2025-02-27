@@ -83,7 +83,7 @@ function Event:new(name)
     string.format("Event %s is not a type of %s %s", name, Event.TYPE_EVENT_FRAME, Event.TYPE_EVENT_CUSTOM))
 
     setmetatable(instance, Event)
-    Debug:trace(instance, "new: type: ", instance.eventType)
+    Debug:trace(instance, "new: type: %s", instance.eventType)
     return instance
 end
 function Event:isNative()
@@ -99,7 +99,6 @@ setmetatable(Event, { __eq = Event.__eq })
 function Event:equals(value)
     return self.name == value
 end
-
 
 Dispatcher = {
     name = "Dispatcher",
@@ -122,7 +121,7 @@ function Dispatcher:new()
 end
 
 function Dispatcher:bind(obj)
-    Debug:trace(self, "bind ", obj.name, "[", id(obj), "]")
+    Debug:trace(self, "bind %s[%s]", obj.name, id(obj))
     
     local obj_data = {
         object = obj,
@@ -135,7 +134,7 @@ function Dispatcher:bind(obj)
     local obj_index = getmetatable(obj).__index
     for fn_name, fn in pairs(obj_index) do
         if fn_name ~= "new" and type(fn) == "function" then
-            Debug:trace(self, "map: ", obj.name, "[", id(obj), "] ", obj.name, ".", fn_name)
+            Debug:trace(self, "map %s[%s] fn: %s", obj.name, id(obj), fn_name)
             local fn_id = id(fn)
             obj_data.object_map[fn_name] = fn
             obj_data.object_map_reversed[fn_id] = fn
@@ -162,15 +161,14 @@ function Dispatcher:hook(fn, callback)
 
     local callback_id = id(callback)
     local target_obj, obj_data = self:target(callback)
-    Debug:trace(self, "hook: ", fn, " -> ", target_obj.name, ":", callback_id)
+    Debug:trace(self, "hook: fn: %s -> %s[%s]", fn, target_obj.name, callback_id)
     
     if not target_obj then
-        Debug:error(self, "No object found for callback ", callback_id)
+        Debug:error(self, "No object found for callback %s", callback_id)
         return
     end
     
-    Debug:trace(self, "hook ", target_obj.name, "[", id(target_obj), "] ", 
-        event, " -> ", target_obj.name, ":", obj_data.object_map_lookup[callback_id])
+    Debug:trace(self, "hook %s[%s] -> %s:%s", target_obj.name, id(target_obj), event, target_obj.name, obj_data.object_map_lookup[callback_id])
     
 end
 function Dispatcher:on(event_name, callback)
@@ -178,7 +176,7 @@ function Dispatcher:on(event_name, callback)
     local target_obj, obj_data = self:target(callback)
     
     if not target_obj then
-        Debug:error(self, "No object found for callback ", callback_id)
+        Debug:error(self, "No object found for callback %s", callback_id)
         return
     end
 
@@ -187,13 +185,11 @@ function Dispatcher:on(event_name, callback)
     local objEvent = Event:new(event_name)
 
     if isFrameEvent(eventPrefix) then
-        Debug:trace(self, eventPrefix, " on ", target_obj.name, "[", id(target_obj), "] ", 
-        event_name, " -> ", target_obj.name, ":", obj_data.object_map_lookup[callback_id])
+        Debug:trace(self, "%s on %s[%s] -> %s:%s", eventPrefix, target_obj.name, id(target_obj), event_name, target_obj.name, obj_data.object_map_lookup[callback_id])
 
         self.Frame:RegisterEvent(event_name)
     else
-        Debug:trace(self, "CUSTOM_EVENT: on ", target_obj.name, "[", id(target_obj), "] ", 
-        event_name, " -> ", target_obj.name, ":", obj_data.object_map_lookup[callback_id])
+        Debug:trace(self, "CUSTOM_EVENT: %s on %s[%s] -> %s:%s", target_obj.name, id(target_obj), event_name, target_obj.name, obj_data.object_map_lookup[callback_id])
     end
     
     if not obj_data.events[event_name] then
@@ -210,10 +206,10 @@ function Dispatcher:dispatch(custom_event, ...)
         arg = table.prepend({custom_event}, arg)
     else
         e = custom_event
-        Debug:trace(self, "!!custom event: ", e)
+        Debug:trace(self, "!!custom event: %s", e)
     end
     
-    Debug:trace(self, "dispatch: event: ", event, " e: ", e, " args: ", Debug:unpack(arg))
+    Debug:trace(self, "dispatch: event: %s e: %s args: %s", event, e, Debug:unpack(arg))
 
     for obj, obj_data in pairs(self.objects) do
         local handlers = obj_data.events[event] or obj_data.events[e]
@@ -233,8 +229,7 @@ function Dispatcher:trigger(obj, obj_data, handlers, ...)
     for _, callback in ipairs(handlers) do
         local fn_id = id(callback)
         local fn_name = obj_data.object_map_lookup[fn_id] or "unknown"
-        Debug:trace(self, "trigger ", obj.name, ":", fn_name, 
-            "[", fn_id, "] for ", obj.name, "[", id(obj), "]")
+        Debug:trace(self, "trigger %s:%s[%id] for %s[%s]", obj.name, fn_name, fn_id, obj.name, id(obj))
         
         local success, err = pcall(function()
             obj_data.object_map_reversed[fn_id](obj, self.Frame, unpack(arg))
@@ -247,7 +242,7 @@ function Dispatcher:trigger(obj, obj_data, handlers, ...)
 end
 
 function Dispatcher:listen()
-    Debug:trace(self, "listen on frame ", self.Frame)
+    Debug:trace(self, "listen on frame %s", self.Frame)
 
     self.Frame:SetScript("OnEvent", bind(self, self.dispatch))
 

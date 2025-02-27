@@ -59,7 +59,7 @@ end
 
 function Money:enable(Frame)
     self.money = GetMoney()
-    Debug:trace(self, "Enable. Money: ", self.money, " copper Frame:", Frame)
+    Debug:trace(self, "Enable. Money: %d copper Frame: %s", self.money, Frame)
 end
 
 function Money:track(Frame, ...)
@@ -70,7 +70,7 @@ function Money:track(Frame, ...)
     local difference = money - self.money
     if difference ~= 0 then
         local action = (difference > 0) and "Gained" or "Lost"
-        print(self, "track ", action, " ", math.abs(difference), " copper")
+        Debug:trace(self, "track %s %d copper", action, math.abs(difference))
     end
     self.money = money
 end
@@ -104,12 +104,12 @@ function Ledger:new(dispatcher)
     }
 
     setmetatable(instance, Ledger)
-    Debug:trace(instance, "new: Dispatcher: ", dispatcher)
+    Debug:trace(instance, "new: Dispatcher: %s", dispatcher)
     return instance
 end
 
 function Ledger:init_db(Frame)
-    Debug:trace(self, "load Frame: ", Frame)
+    Debug:trace(self, "load Frame: %s", Frame)
 
     if not LedgerDB then
         LedgerDB = {}
@@ -117,7 +117,7 @@ function Ledger:init_db(Frame)
 end
 
 function Ledger:enable(Frame)
-    Debug:trace(self, "Enable. Frame: ", Frame)
+    Debug:trace(self, "Enable. Frame: %s", Frame)
 
     SLASH_LEDGER1 = "/ledger"
     SlashCmdList["LEDGER"] = function(msg)
@@ -161,31 +161,31 @@ function Ledger:Update()
     -- self.Content_Update()
     -- self.ScrollBar_Update()
 
-    Debug:trace(self, "Update: ", "Current Day: ", self.day, " type: ", type(self.day))
+    Debug:trace(self, "Update: Current Day: %d type: %s", self.day, type(self.day))
 
     self.DayDropdown:SetValue(self.day)
     self.MonthDropdown:SetValue(Date:getMonthNames()[self.month])
     self.YearDropdown:SetValue(self.year)
-    Debug:trace(self, "Ledger:Update: ", UIDropDownMenu_SetSelectedID, " DayDropdown:", self.DayDropdown)
+    Debug:trace(self, "Ledger:Update: %d DayDropdown[%s]", UIDropDownMenu_SetSelectedID, self.DayDropdown)
 end
 function Ledger:SetDay(e, day)
-    Debug:trace(self, "SetDay: ", day)
+    Debug:trace(self, "SetDay: %d", day)
     self.day = day
     return day
 end
 function Ledger:SetMonth(e, month)
-    Debug:trace(self, "SetMonth: ", month)
+    Debug:trace(self, "SetMonth: %s", month)
     self.month = month
     return month
 end
 function Ledger:SetYear(...)
-    Debug:trace(self, "SetYear: arg:", Debug:unpack(arg))
+    Debug:trace(self, "SetYear: arg: %s", Debug:unpack(arg))
     year = arg[2]
     self.year = year
     return year
 end
 function Ledger:PrevDay(...)
-    Debug:trace(self, "PrevDay: day:", self.day, " args: ", Debug:unpack(arg))
+    Debug:trace(self, "PrevDay: day: %d args: %s", self.day, Debug:unpack(arg))
     self.day = self.day - 1
     if self.day < 1 then
         if self.month == 1 then
@@ -199,7 +199,7 @@ function Ledger:PrevDay(...)
     self.event:dispatch("DATE_CHANGED")
 end
 function Ledger:NextDay(...)
-    Debug:trace(self, "NextDay: day:", self.day, " month: ", self.month, " year: ", self.year, " args: ", Debug:unpack(arg))
+    Debug:trace(self, "NextDay: day: %d month: %s year: %d args: %s", self.day, self.month, self.year, Debug:unpack(arg))
     self.day = self.day + 1
     if self.day > Date:numDaysInMonth(self.month, self.year) then
         self.day = 1

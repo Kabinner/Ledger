@@ -1,6 +1,6 @@
 function bind(obj, fn)
     return function(...)
-        Debug:trace(obj, "bind: event:", event, " arg1: ", arg1)
+        Debug:trace(obj, "bind: event: %s arg1: %s", event, arg1)
         local args = {arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10}
         if table.getn(args) == 0 then
             args = {"CUSTOM_EVENT"}
@@ -57,14 +57,11 @@ CreateFrame = function(...)
 
 
     function Frame:SetDropdown(label, data, fn)
-        Debug:trace("Frame:SetDropdown Frame label: ", label, " id: ", Frame, " fn: ", fn)
-
-
-        
+        Debug:trace("Frame:SetDropdown Frame label: %s id: %s fn: %s", label, Frame, fn)
 
         -- Initialize the dropdown menu
         local function Initialize()
-            Debug:trace("Frame:SetDropDown:Initialize self: ", self)
+            Debug:trace("Frame:SetDropDown:Initialize self: %s", self)
 
             for i, val in ipairs(data) do
                 local info = {
@@ -79,14 +76,14 @@ CreateFrame = function(...)
 
             self.Label = label
             function Frame:SetSize(width, height)
-                Debug:trace("Frame:SetWidth self: ", self, " width:", width)
+                Debug:trace("Frame:SetWidth self: %s width: %d", self, width)
                 if width then
                     UIDropDownMenu_SetWidth(width, self)
                 end
             end
             
             if fn then
-                Debug:trace("Frame:SetDropdown[",self.Label,"]: self.Callback: ", fn)
+                Debug:trace("Frame:SetDropdown[%s] self.Callback: %s", self.Label, fn)
                 self.Callback = fn
             end
         end
@@ -108,9 +105,9 @@ CreateFrame = function(...)
             UIDropDownMenu_SetText(value, Frame)
             UIDropDownMenu_SetSelectedValue(Frame, value)
 
-            Debug:trace("Frame:SetValue: this: ", this, " Frame: ", Frame, " callback: ", self.Callback, " Data: ", data, " Value: ", value, " self:", self, " foo: ", foo, " bar: ", bar, " foobar: ", foobar)
+            Debug:trace("Frame:SetValue: this: %s Frame: %s callback: %s Data: %s Value: %s self: %s", this, Frame, self.Callback, data, value, self)
 
-            Debug:trace("Frame:SetValue:Callback: fn: ", self.Callback, " value:", value)
+            Debug:trace("Frame:SetValue:Callback: fn: %s value: %s", self.Callback, value)
             self.Callback(value)
             return self
         end

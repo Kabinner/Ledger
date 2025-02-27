@@ -63,6 +63,7 @@ function Debug:error(caller, msg, ...)
         arg = table.prepend({caller}, arg)
         caller = {}
     end
+    -- arg = (type(caller) ~= "table" and table.prepend({caller}, arg) or arg)
 
     local _color = caller.LOG_COLOR
     local _debug = caller.DEBUG

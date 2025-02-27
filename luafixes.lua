@@ -11,13 +11,13 @@ function table.prepend(source, target)
     -- copy of target
     local copy = {}
 
-    for idx = 1,table.getn(source) do
+    for idx = 1,source do
         if idx ~= "n" then
             copy[idx] = source[idx]
         end
     end
 
-    for idx = 1,table.getn(target) do
+    for idx = 1,target do
         if idx ~= "n" then
             copy[idx+table.getn(source)] = target[idx]
         end
